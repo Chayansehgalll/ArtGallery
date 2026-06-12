@@ -4,7 +4,7 @@ import { ZodError } from "zod";
 import { env } from "../config/env.js";
 
 export function errorHandler(
-  err: Error,
+  err: any,
   _req: Request,
   res: Response,
   _next: NextFunction
@@ -17,22 +17,22 @@ export function errorHandler(
     });
   }
 
-  // Zod validation errors
-  if (err instanceof ZodError) {
+  // Intercept and print structured Zod validation responses perfectly
+  if (err instanceof ZodError || (err && (err.name === "ZodError" || Array.isArray(err.errors)))) {
     return res.status(400).json({
       success: false,
       message: "Validation failed",
-      errors: err.errors.map((e) => ({
+      errors: (err.errors || []).map((e: any) => ({
         field: e.path.join("."),
         message: e.message,
       })),
     });
   }
 
-  // Unknown errors
-  console.error("Unhandled error:", err);
+  // Unknown generic errors
+  console.error("Unhandled server exception context:", err);
   return res.status(500).json({
     success: false,
-    message: env.nodeEnv === "production" ? "Internal server error" : err.message,
+    message: env.nodeEnv === "production" ? "Internal server error" : err.message || "An unexpected error occurred",
   });
 }

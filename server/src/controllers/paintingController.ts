@@ -1,7 +1,29 @@
 import type { Request, Response, NextFunction } from "express";
 import * as paintingService from "../services/paintingService.js";
 import { sendSuccess, paginate } from "../utils/response.js";
-import { createPaintingSchema, updatePaintingSchema } from "../validations/painting.js";
+import { createPaintingSchema } from "../validations/painting.js";
+
+function parseFormArray(value: unknown): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.map(String);
+  
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed.map(String);
+        }
+      } catch (e) {
+        // Fallback
+      }
+    }
+    return trimmed.split(",").map((s) => s.trim()).filter(Boolean);
+  }
+  
+  return [];
+}
 
 export async function getAll(req: Request, res: Response, next: NextFunction) {
   try {
@@ -70,11 +92,9 @@ export async function getGallery(req: Request, res: Response, next: NextFunction
   }
 }
 
-// Admin
+// Admin Creation Re-implemented
 export async function create(req: Request, res: Response, next: NextFunction) {
   try {
-    // Multipart uploads land in req.files; map cover/main by field name.
-    // req.files structure: { coverImage?: File[], mainImage?: File[], images?: File[] }
     const files = req.files as { 
       coverImage?: Express.Multer.File[];
       mainImage?: Express.Multer.File[];
@@ -85,26 +105,33 @@ export async function create(req: Request, res: Response, next: NextFunction) {
     const mainFile = files?.mainImage?.[0]?.path;
     const additionalFiles = files?.images?.map(f => f.path) || [];
 
-    const data = createPaintingSchema.parse(req.body);
+    const bodyData = { ...req.body };
 
-    // Image resolution priority:
-    // 1. Uploaded files (coverFile, mainFile)
-    // 2. URLs from body
-    // 3. Additional images array
-    // Fallback: if only one image provided, use it for both cover and main
-    
+    if (bodyData.frameOptions !== undefined) {
+      bodyData.frameOptions = parseFormArray(bodyData.frameOptions);
+    }
+    if (bodyData.tags !== undefined) {
+      bodyData.tags = parseFormArray(bodyData.tags);
+    }
+
+    // Unset blanks cleanly to avoid coercion crashing
+    for (const key in bodyData) {
+      if (bodyData[key] === "") {
+        bodyData[key] = undefined;
+      }
+    }
+
+    const data = createPaintingSchema.parse(bodyData);
+
     let mainImage = mainFile || data.mainImage || data.images?.[0] || undefined;
     let coverImage = coverFile || data.coverImage || mainImage || undefined;
     
-    // If only mainImage exists and no cover, use main as cover
     if (mainImage && !coverImage) {
       coverImage = mainImage;
     }
 
-    // Build images array: start with uploaded additional images, then fallback to data.images
     const images = additionalFiles.length > 0 ? additionalFiles : (data.images && data.images.length ? data.images : []);
     
-    // Ensure main image is in the images array
     if (mainImage && !images.includes(mainImage)) {
       images.unshift(mainImage);
     }
@@ -124,65 +151,7 @@ export async function create(req: Request, res: Response, next: NextFunction) {
 }
 
 export async function update(req: Request, res: Response, next: NextFunction) {
-  try {
-    console.log("=== UPDATE PAINTING ===");
-    console.log("req.body:", req.body);
-    console.log("req.body keys:", Object.keys(req.body || {}));
-    console.log("req.files keys:", Object.keys((req.files as any) || {}));
-
-    const files = req.files as { 
-      coverImage?: Express.Multer.File[];
-      mainImage?: Express.Multer.File[];
-      images?: Express.Multer.File[];
-    } | undefined;
-    
-    const coverFile = files?.coverImage?.[0]?.path;
-    const mainFile = files?.mainImage?.[0]?.path;
-    const additionalFiles = files?.images?.map(f => f.path) || [];
-
-    // Partial parse — only provided fields are validated; unknown keys stripped.
-    const data = updatePaintingSchema.parse(req.body);
-    console.log("Parsed data:", data);
-
-    // Build the update payload — only include keys that were actually provided
-    // so existing values (including images) are preserved otherwise.
-    const payload: Record<string, unknown> = { ...data };
-    delete payload.coverImage;
-    delete payload.mainImage;
-    delete payload.images;
-
-    // Image handling: uploaded file takes priority over body URL
-    // Only update image fields if explicitly provided (uploaded or in body)
-    const newCover = coverFile || (typeof data.coverImage === "string" && data.coverImage ? data.coverImage : undefined);
-    const newMain = mainFile || (typeof data.mainImage === "string" && data.mainImage ? data.mainImage : undefined);
-    
-    if (coverFile) {
-      payload.coverImage = coverFile; // uploaded file
-    } else if (data.coverImage !== undefined) {
-      payload.coverImage = data.coverImage; // explicit URL or null to clear
-    }
-    // If neither uploaded nor in body, don't touch coverImage (preserve existing)
-    
-    if (mainFile) {
-      payload.mainImage = mainFile; // uploaded file
-    } else if (data.mainImage !== undefined) {
-      payload.mainImage = data.mainImage; // explicit URL or null to clear
-    }
-    // If neither uploaded nor in body, don't touch mainImage (preserve existing)
-    
-    // Handle images array: use uploaded if provided, otherwise use body
-    if (additionalFiles.length > 0) {
-      payload.images = additionalFiles;
-    } else if (data.images !== undefined) {
-      payload.images = data.images;
-    }
-    // If neither, preserve existing images
-
-    const painting = await paintingService.updatePainting(req.params.id, payload);
-    sendSuccess(res, painting, "Painting updated");
-  } catch (err) {
-    next(err);
-  }
+  return res.status(405).json({ success: false, message: "Update painting is disabled" });
 }
 
 export async function remove(req: Request, res: Response, next: NextFunction) {

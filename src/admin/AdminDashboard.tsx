@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { Routes, Route, NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Image as ImageIcon, ShoppingBag, BadgeIndianRupee,
-  Tags, Settings, LogOut, Plus, Trash2, Pencil, X, Check, Loader2,
+  Tags, Settings, LogOut, Plus, Trash2, X, Check, Loader2,
   TrendingUp, Users, Package, IndianRupee, RefreshCw, Eye, Upload,
 } from "lucide-react";
 import * as api from "./api";
@@ -142,7 +142,6 @@ function Overview() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent orders */}
         <div className="border border-white/8 bg-white/[0.02] p-5">
           <h3 className="text-white text-sm tracking-wider uppercase font-light mb-4">Recent Orders</h3>
           {stats.recentOrders.length === 0 ? (
@@ -165,7 +164,6 @@ function Overview() {
           )}
         </div>
 
-        {/* Low stock */}
         <div className="border border-white/8 bg-white/[0.02] p-5">
           <h3 className="text-white text-sm tracking-wider uppercase font-light mb-4">Limited Editions Running Low</h3>
           {stats.lowStock.length === 0 ? (
@@ -188,7 +186,7 @@ function Overview() {
 
 /* ═══════════════ PAINTINGS ═══════════════ */
 const EMPTY_PAINTING = {
-  title: "", description: "", story: "", price: 0, originalPrice: null,
+  title: "", description: "", story: "", price: "", originalPrice: "",
   width: 24, height: 36,
   medium: "Oil on Canvas", style: "Contemporary", year: 2024,
   edition: 1, editionTotal: 1, isOriginal: true, isFeatured: false,
@@ -201,7 +199,6 @@ function Paintings() {
   const [cats, setCats] = useState<AdminCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
-  const [editing, setEditing] = useState<AdminPainting | null>(null);
   const [creating, setCreating] = useState(false);
 
   const load = useCallback(async () => {
@@ -216,8 +213,7 @@ function Paintings() {
   const remove = async (id: string) => {
     if (!confirm("Delete this painting permanently?")) return;
     const res = await api.deletePainting(id);
-    if (res.ok) load();
-    else alert(res.message);
+    if (res.ok) load(); else alert(res.message);
   };
 
   if (loading) return <Loading />;
@@ -225,7 +221,7 @@ function Paintings() {
   return (
     <div>
       <Header title="Paintings" subtitle={`${items.length} artworks`} action={
-        <button onClick={() => { setCreating(true); setEditing(null); }}
+        <button onClick={() => setCreating(true)}
           className="px-4 py-2.5 bg-white text-black text-[10px] tracking-[0.2em] uppercase font-medium hover:bg-white/90 transition-colors flex items-center gap-2">
           <Plus size={14} /> Add Painting
         </button>
@@ -252,7 +248,6 @@ function Paintings() {
               <div className="flex items-center justify-between mt-3">
                 <span className="text-white/70 text-sm">{money(p.price)}</span>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => { setEditing(p); setCreating(false); }} className="text-white/40 hover:text-white transition-colors"><Pencil size={14} /></button>
                   <button onClick={() => remove(p.id)} className="text-white/40 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
                 </div>
               </div>
@@ -261,12 +256,11 @@ function Paintings() {
         ))}
       </div>
 
-      {(creating || editing) && (
+      {creating && (
         <PaintingForm
-          painting={editing}
           categories={cats}
-          onClose={() => { setCreating(false); setEditing(null); }}
-          onSaved={() => { setCreating(false); setEditing(null); load(); }}
+          onClose={() => setCreating(false)}
+          onSaved={() => { setCreating(false); load(); }}
         />
       )}
     </div>
@@ -274,34 +268,20 @@ function Paintings() {
 }
 
 function PaintingForm({
-  painting, categories, onClose, onSaved,
+  categories, onClose, onSaved,
 }: {
-  painting: AdminPainting | null;
   categories: AdminCategory[];
   onClose: () => void;
   onSaved: () => void;
 }) {
-  // Initialize form with all defaults, then merge in painting data
-  const initialForm: Record<string, unknown> = painting
-    ? {
-        ...EMPTY_PAINTING,
-        ...painting,
-        price: Number(painting.price) || 0,
-        originalPrice: painting.originalPrice ? Number(painting.originalPrice) : null,
-        width: Number(painting.width) || 24,
-        height: Number(painting.height) || 36,
-        year: Number(painting.year) || 2024,
-        edition: Number(painting.edition) || 1,
-        editionTotal: Number(painting.editionTotal) || 1,
-        images: painting.images || [],
-        tags: painting.tags || [],
-        frameOptions: painting.frameOptions || ["Black Oak", "Walnut"],
-      }
-    : { ...EMPTY_PAINTING, categoryId: categories[0]?.id || "" };
-
+  const initialForm = { ...EMPTY_PAINTING, categoryId: categories[0]?.id || "" };
   const [form, setForm] = useState<Record<string, unknown>>(initialForm);
-  
-  // Separate file state for cover and main images
+  const formRef = useRef<Record<string, unknown>>(initialForm);
+
+  useEffect(() => {
+    formRef.current = form;
+  }, [form]);
+
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
   const [additionalImagesFiles, setAdditionalImagesFiles] = useState<File[]>([]);
@@ -311,7 +291,11 @@ function PaintingForm({
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
 
-  const set = (k: string, v: unknown) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: string, v: unknown) => setForm((f) => {
+    const next = { ...f, [k]: v };
+    formRef.current = next;
+    return next;
+  });
 
   const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -342,32 +326,31 @@ function PaintingForm({
   };
 
   const save = async () => {
-    if (!form.title || !form.description || !form.categoryId) {
-      setErr("Title, description and category are required");
+    const currentForm = formRef.current || form || initialForm;
+    if (!currentForm.title || !currentForm.description || !currentForm.categoryId || !currentForm.price) {
+      setErr("Title, description, price, and category are required fields");
       return;
     }
     setSaving(true);
     setErr("");
+
     const payload = {
-      ...form,
-      price: Number(form.price),
-      width: Number(form.width),
-      height: Number(form.height),
-      year: Number(form.year),
-      edition: Number(form.edition),
-      editionTotal: Number(form.editionTotal),
+      ...currentForm,
+      price: Number(currentForm.price || 0),
+      width: Number(currentForm.width || 24),
+      height: Number(currentForm.height || 36),
+      year: Number(currentForm.year || 2024),
+      edition: Number(currentForm.edition || 1),
+      editionTotal: Number(currentForm.editionTotal || 1),
     };
     
-    // Include files if present
     const files = {
       coverImage: coverImageFile || undefined,
       mainImage: mainImageFile || undefined,
       images: additionalImagesFiles.length > 0 ? additionalImagesFiles : undefined,
     };
     
-    const res = painting
-      ? await api.updatePainting(painting.id, payload, files)
-      : await api.createPainting(payload, files);
+    const res = await api.createPainting(payload, files);
     setSaving(false);
     if (res.ok) onSaved();
     else setErr(res.message || "Save failed");
@@ -376,36 +359,32 @@ function PaintingForm({
   const input = "w-full bg-white/5 border border-white/10 text-white text-sm px-3 py-2.5 focus:outline-none focus:border-white/30 transition-colors placeholder:text-white/20";
   const label = "text-white/30 text-[10px] tracking-[0.2em] uppercase mb-1.5 block";
 
-  // Get current cover and main images (from form or preview)
-  const currentCover = coverImagePreview || (form.coverImage as string) || "";
-  const currentMain = mainImagePreview || (form.mainImage as string) || "";
-
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-[#0a0a0a] border border-white/10 w-full max-w-3xl my-8 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-white/5 sticky top-0 bg-[#0a0a0a]">
-          <h3 className="text-white text-base font-light">{painting ? "Edit Painting" : "Add Painting"}</h3>
+          <h3 className="text-white text-base font-light">Add Painting</h3>
           <button onClick={onClose} className="text-white/40 hover:text-white"><X size={18} /></button>
         </div>
 
         <div className="p-5 space-y-6">
           <div>
             <label className={label}>Title *</label>
-            <input className={input} value={form.title as string} onChange={(e) => set("title", e.target.value)} />
+            <input className={input} value={(form?.title as string) || ""} onChange={(e) => set("title", e.target.value)} />
           </div>
           <div>
             <label className={label}>Description *</label>
-            <textarea className={input} rows={3} value={form.description as string} onChange={(e) => set("description", e.target.value)} />
+            <textarea className={input} rows={3} value={(form?.description as string) || ""} onChange={(e) => set("description", e.target.value)} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={label}>Price (₹) *</label>
-              <input type="number" className={input} value={form.price as number} onChange={(e) => set("price", e.target.value)} />
+              <input type="number" className={input} value={(form?.price as number) || ""} onChange={(e) => set("price", e.target.value)} />
             </div>
             <div>
               <label className={label}>Category *</label>
-              <select className={input} value={form.categoryId as string} onChange={(e) => set("categoryId", e.target.value)}>
+              <select className={input} value={(form?.categoryId as string) || ""} onChange={(e) => set("categoryId", e.target.value)}>
                 <option value="">Select…</option>
                 {categories.map((c) => <option key={c.id} value={c.id} className="bg-black">{c.name}</option>)}
               </select>
@@ -413,88 +392,56 @@ function PaintingForm({
           </div>
 
           <div className="grid grid-cols-3 gap-4">
-            <div><label className={label}>Width (in)</label><input type="number" className={input} value={form.width as number} onChange={(e) => set("width", e.target.value)} /></div>
-            <div><label className={label}>Height (in)</label><input type="number" className={input} value={form.height as number} onChange={(e) => set("height", e.target.value)} /></div>
-            <div><label className={label}>Year</label><input type="number" className={input} value={form.year as number} onChange={(e) => set("year", e.target.value)} /></div>
+            <div><label className={label}>Width (in)</label><input type="number" className={input} value={(form?.width as number) || ""} onChange={(e) => set("width", e.target.value)} /></div>
+            <div><label className={label}>Height (in)</label><input type="number" className={input} value={(form?.height as number) || ""} onChange={(e) => set("height", e.target.value)} /></div>
+            <div><label className={label}>Year</label><input type="number" className={input} value={(form?.year as number) || ""} onChange={(e) => set("year", e.target.value)} /></div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div><label className={label}>Medium</label><input className={input} value={form.medium as string} onChange={(e) => set("medium", e.target.value)} /></div>
-            <div><label className={label}>Style</label><input className={input} value={form.style as string} onChange={(e) => set("style", e.target.value)} /></div>
+            <div><label className={label}>Medium</label><input className={input} value={(form?.medium as string) || ""} onChange={(e) => set("medium", e.target.value)} /></div>
+            <div><label className={label}>Style</label><input className={input} value={(form?.style as string) || ""} onChange={(e) => set("style", e.target.value)} /></div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div><label className={label}>Edition #</label><input type="number" className={input} value={form.edition as number} onChange={(e) => set("edition", e.target.value)} /></div>
-            <div><label className={label}>Total Editions</label><input type="number" className={input} value={form.editionTotal as number} onChange={(e) => set("editionTotal", e.target.value)} /></div>
+            <div><label className={label}>Edition #</label><input type="number" className={input} value={(form?.edition as number) || ""} onChange={(e) => set("edition", e.target.value)} /></div>
+            <div><label className={label}>Total Editions</label><input type="number" className={input} value={(form?.editionTotal as number) || ""} onChange={(e) => set("editionTotal", e.target.value)} /></div>
           </div>
 
           {/* ═══ Cover Image Upload ═══ */}
           <div className="border border-white/10 bg-white/[0.02] p-4">
             <h4 className="text-white text-sm font-light mb-1">Cover Image (Thumbnail)</h4>
-            <p className="text-white/40 text-[10px] mb-3">Optional. Used on homepage cards, collection pages, search results, wishlist, and cart. If not provided, the main image will be used.</p>
+            <p className="text-white/40 text-[10px] mb-3">Optional. Used on homepage cards, collection pages, search results. If not provided, the main image will be used.</p>
             
-            {currentCover && (
+            {coverImagePreview && (
               <div className="mb-3 relative inline-block">
-                <img src={currentCover} alt="Cover preview" className="h-24 w-24 object-cover border border-white/10" />
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setCoverImageFile(null);
-                    setCoverImagePreview("");
-                  }}
-                  className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors rounded"
-                  title="Remove cover image"
-                >
-                  <X size={12} />
-                </button>
+                <img src={coverImagePreview} alt="Cover preview" className="h-24 w-24 object-cover border border-white/10" />
+                <button type="button" onClick={() => { setCoverImageFile(null); setCoverImagePreview(""); }} className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white flex items-center justify-center rounded"><X size={12} /></button>
               </div>
             )}
             
             <label className="block border border-dashed border-white/15 hover:border-white/30 bg-white/[0.02] cursor-pointer p-4 text-center transition-colors">
-              <input 
-                type="file" 
-                accept="image/*" 
-                className="hidden"
-                onChange={handleCoverImageChange}
-              />
+              <input type="file" accept="image/*" className="hidden" onChange={handleCoverImageChange} />
               <Upload size={20} className="text-white/30 mx-auto mb-1" />
               <p className="text-white/50 text-[10px]">Click to upload cover image</p>
-              {coverImageFile && <p className="text-white/30 text-[9px] mt-1">{coverImageFile.name}</p>}
             </label>
           </div>
 
           {/* ═══ Main Image Upload ═══ */}
           <div className="border border-white/10 bg-white/[0.02] p-4">
             <h4 className="text-white text-sm font-light mb-1">Main Painting Image</h4>
-            <p className="text-white/40 text-[10px] mb-3">Full-resolution artwork shown on the painting details page and in full-screen/zoom views. Required for proper display.</p>
+            <p className="text-white/40 text-[10px] mb-3">Full-resolution artwork shown on details page. Required for proper display.</p>
             
-            {currentMain && (
+            {mainImagePreview && (
               <div className="mb-3 relative inline-block">
-                <img src={currentMain} alt="Main preview" className="h-24 w-24 object-cover border border-white/10" />
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setMainImageFile(null);
-                    setMainImagePreview("");
-                  }}
-                  className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors rounded"
-                  title="Remove main image"
-                >
-                  <X size={12} />
-                </button>
+                <img src={mainImagePreview} alt="Main preview" className="h-24 w-24 object-cover border border-white/10" />
+                <button type="button" onClick={() => { setMainImageFile(null); setMainImagePreview(""); }} className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white flex items-center justify-center rounded"><X size={12} /></button>
               </div>
             )}
             
             <label className="block border border-dashed border-white/15 hover:border-white/30 bg-white/[0.02] cursor-pointer p-4 text-center transition-colors">
-              <input 
-                type="file" 
-                accept="image/*" 
-                className="hidden"
-                onChange={handleMainImageChange}
-              />
+              <input type="file" accept="image/*" className="hidden" onChange={handleMainImageChange} />
               <Upload size={20} className="text-white/30 mx-auto mb-1" />
               <p className="text-white/50 text-[10px]">Click to upload main painting image</p>
-              {mainImageFile && <p className="text-white/30 text-[9px] mt-1">{mainImageFile.name}</p>}
             </label>
           </div>
 
@@ -508,26 +455,14 @@ function PaintingForm({
                 {additionalImagesFiles.map((file, i) => (
                   <div key={i} className="relative aspect-square bg-white/5 border border-white/10 overflow-hidden">
                     <img src={URL.createObjectURL(file)} alt={`Additional ${i}`} className="w-full h-full object-cover" />
-                    <button 
-                      type="button"
-                      onClick={() => setAdditionalImagesFiles(prev => prev.filter((_, idx) => idx !== i))}
-                      className="absolute top-1 right-1 w-5 h-5 bg-black/70 text-white flex items-center justify-center hover:bg-red-500 transition-colors"
-                    >
-                      <X size={12} />
-                    </button>
+                    <button type="button" onClick={() => setAdditionalImagesFiles(prev => prev.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 w-5 h-5 bg-black/70 text-white flex items-center justify-center"><X size={12} /></button>
                   </div>
                 ))}
               </div>
             )}
             
             <label className="block border border-dashed border-white/15 hover:border-white/30 bg-white/[0.02] cursor-pointer p-4 text-center transition-colors">
-              <input 
-                type="file" 
-                accept="image/*" 
-                multiple
-                className="hidden"
-                onChange={handleAdditionalImagesChange}
-              />
+              <input type="file" accept="image/*" multiple className="hidden" onChange={handleAdditionalImagesChange} />
               <Upload size={20} className="text-white/30 mx-auto mb-1" />
               <p className="text-white/50 text-[10px]">Click to upload additional images</p>
             </label>
@@ -535,30 +470,25 @@ function PaintingForm({
 
           <div>
             <label className={label}>Tags (comma separated)</label>
-            <input className={input} placeholder="abstract, calm"
-              value={(form.tags as string[]).join(", ")}
-              onChange={(e) => set("tags", e.target.value.split(",").map((s) => s.trim()).filter(Boolean))} />
+            <input className={input} placeholder="abstract, calm" value={Array.isArray(form?.tags) ? (form.tags as string[]).join(", ") : ""} onChange={(e) => set("tags", e.target.value.split(",").map((s) => s.trim()).filter(Boolean))} />
           </div>
           <div>
             <label className={label}>Frame Options (comma separated)</label>
-            <input className={input}
-              value={(form.frameOptions as string[]).join(", ")}
-              onChange={(e) => set("frameOptions", e.target.value.split(",").map((s) => s.trim()).filter(Boolean))} />
+            <input className={input} value={Array.isArray(form?.frameOptions) ? (form.frameOptions as string[]).join(", ") : ""} onChange={(e) => set("frameOptions", e.target.value.split(",").map((s) => s.trim()).filter(Boolean))} />
           </div>
 
           <div className="flex flex-wrap gap-4 pt-2">
-            <Toggle label="Active (visible)" value={form.isActive as boolean} onChange={(v) => set("isActive", v)} />
-            <Toggle label="Featured" value={form.isFeatured as boolean} onChange={(v) => set("isFeatured", v)} />
-            <Toggle label="Original" value={form.isOriginal as boolean} onChange={(v) => set("isOriginal", v)} />
-            <Toggle label="In Stock" value={form.inStock as boolean} onChange={(v) => set("inStock", v)} />
+            <Toggle label="Active (visible)" value={!!form?.isActive} onChange={(v) => set("isActive", v)} />
+            <Toggle label="Featured" value={!!form?.isFeatured} onChange={(v) => set("isFeatured", v)} />
+            <Toggle label="Original" value={!!form?.isOriginal} onChange={(v) => set("isOriginal", v)} />
+            <Toggle label="In Stock" value={!!form?.inStock} onChange={(v) => set("inStock", v)} />
           </div>
 
           {err && <p className="text-red-400/80 text-xs">{err}</p>}
         </div>
 
         <div className="flex gap-3 p-5 border-t border-white/5 sticky bottom-0 bg-[#0a0a0a]">
-          <button onClick={save} disabled={saving}
-            className="flex-1 py-3 bg-white text-black text-[10px] tracking-[0.2em] uppercase font-medium hover:bg-white/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
+          <button onClick={save} disabled={saving} className="flex-1 py-3 bg-white text-black text-[10px] tracking-[0.2em] uppercase font-medium hover:bg-white/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
             {saving ? <><Loader2 size={14} className="animate-spin" /> Saving…</> : <><Check size={14} /> Save</>}
           </button>
           <button onClick={onClose} className="px-6 py-3 border border-white/10 text-white/50 text-[10px] tracking-[0.2em] uppercase hover:text-white transition-colors">Cancel</button>
@@ -580,15 +510,13 @@ function Orders() {
     setLoading(true);
     const res = await api.getOrders(1, 100, filter || undefined);
     setLoading(false);
-    if (res.ok && res.data) setItems(res.data);
-    else setErr(res.message || "Failed");
+    if (res.ok && res.data) setItems(res.data); else setErr(res.message || "Failed");
   }, [filter]);
   useEffect(() => { load(); }, [load]);
 
   const setStatus = async (id: string, status: string) => {
     const res = await api.updateOrderStatus(id, status);
-    if (res.ok) load();
-    else alert(res.message);
+    if (res.ok) load(); else alert(res.message);
   };
 
   if (loading) return <Loading />;
@@ -617,8 +545,7 @@ function Orders() {
               </div>
               <div className="flex items-center gap-4 flex-shrink-0">
                 <span className="text-white text-sm hidden sm:block">{money(o.total)}</span>
-                <select value={o.status} onChange={(e) => setStatus(o.id, e.target.value)}
-                  className="bg-white/5 border border-white/10 text-white/70 text-[10px] tracking-wider uppercase px-2 py-1.5 focus:outline-none focus:border-white/30">
+                <select value={o.status} onChange={(e) => setStatus(o.id, e.target.value)} className="bg-white/5 border border-white/10 text-white/70 text-[10px] tracking-wider uppercase px-2 py-1.5 focus:outline-none focus:border-white/30">
                   {ORDER_STATUSES.map((s) => <option key={s} value={s} className="bg-black">{s}</option>)}
                 </select>
                 <button onClick={() => setOpen(o)} className="text-white/40 hover:text-white"><Eye size={16} /></button>
@@ -681,15 +608,13 @@ function Payments() {
     setLoading(true);
     const res = await api.getPendingPayments();
     setLoading(false);
-    if (res.ok && res.data) setItems(res.data);
-    else setErr(res.message || "Failed");
+    if (res.ok && res.data) setItems(res.data); else setErr(res.message || "Failed");
   }, []);
   useEffect(() => { load(); }, [load]);
 
   const verify = async (id: string, approved: boolean) => {
     const res = await api.verifyPayment(id, approved);
-    if (res.ok) load();
-    else alert(res.message);
+    if (res.ok) load(); else alert(res.message);
   };
 
   if (loading) return <Loading />;
@@ -718,14 +643,8 @@ function Payments() {
                   <p className="text-white/60 text-xs mt-1">UPI Ref: <span className="text-amber-400/80 font-mono">{o.paymentReference || "—"}</span></p>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => verify(o.id, true)}
-                    className="px-4 py-2.5 bg-emerald-500/90 text-white text-[10px] tracking-[0.15em] uppercase font-medium hover:bg-emerald-500 transition-colors flex items-center gap-2">
-                    <Check size={14} /> Approve
-                  </button>
-                  <button onClick={() => verify(o.id, false)}
-                    className="px-4 py-2.5 border border-red-500/30 text-red-400/80 text-[10px] tracking-[0.15em] uppercase hover:bg-red-500/10 transition-colors flex items-center gap-2">
-                    <X size={14} /> Reject
-                  </button>
+                  <button onClick={() => verify(o.id, true)} className="px-4 py-2.5 bg-emerald-500/90 text-white text-[10px] tracking-[0.15em] uppercase font-medium hover:bg-emerald-500 transition-colors flex items-center gap-2"><Check size={14} /> Approve</button>
+                  <button onClick={() => verify(o.id, false)} className="px-4 py-2.5 border border-red-500/30 text-red-400/80 text-[10px] tracking-[0.15em] uppercase hover:bg-red-500/10 transition-colors flex items-center gap-2"><X size={14} /> Reject</button>
                 </div>
               </div>
             </div>
@@ -756,14 +675,12 @@ function Categories() {
     setAdding(true);
     const res = await api.createCategory(name.trim());
     setAdding(false);
-    if (res.ok) { setName(""); load(); }
-    else alert(res.message);
+    if (res.ok) { setName(""); load(); } else alert(res.message);
   };
   const remove = async (id: string) => {
     if (!confirm("Delete this category?")) return;
     const res = await api.deleteCategory(id);
-    if (res.ok) load();
-    else alert(res.message);
+    if (res.ok) load(); else alert(res.message);
   };
 
   if (loading) return <Loading />;
@@ -772,13 +689,8 @@ function Categories() {
     <div>
       <Header title="Categories" subtitle={`${items.length} categories`} />
       <div className="flex gap-2 mb-6 max-w-md">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="New category name"
-          onKeyDown={(e) => e.key === "Enter" && add()}
-          className="flex-1 bg-white/5 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-white/30 placeholder:text-white/20" />
-        <button onClick={add} disabled={adding}
-          className="px-4 py-2.5 bg-white text-black text-[10px] tracking-[0.2em] uppercase font-medium hover:bg-white/90 transition-colors flex items-center gap-2 disabled:opacity-60">
-          {adding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Add
-        </button>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="New category name" onKeyDown={(e) => e.key === "Enter" && add()} className="flex-1 bg-white/5 border border-white/10 text-white text-sm px-4 py-2.5 focus:outline-none focus:border-white/30 placeholder:text-white/20" />
+        <button onClick={add} disabled={adding} className="px-4 py-2.5 bg-white text-black text-[10px] tracking-[0.2em] uppercase font-medium hover:bg-white/90 transition-colors flex items-center gap-2 disabled:opacity-60">{adding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Add</button>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         {items.map((c) => (
@@ -807,8 +719,7 @@ function SettingsPanel() {
     setLoading(true);
     const res = await api.getPaymentSettings();
     setLoading(false);
-    if (res.ok && res.data) setS(res.data);
-    else setErr(res.message || "Failed");
+    if (res.ok && res.data) setS(res.data); else setErr(res.message || "Failed");
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -816,8 +727,7 @@ function SettingsPanel() {
     setSaving(true); setErr("");
     const res = await api.updatePaymentSettings(s);
     setSaving(false);
-    if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 2000); }
-    else setErr(res.message || "Save failed");
+    if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 2000); } else setErr(res.message || "Save failed");
   };
 
   const input = "w-full bg-white/5 border border-white/10 text-white text-sm px-3 py-2.5 focus:outline-none focus:border-white/30 placeholder:text-white/20";
@@ -834,8 +744,7 @@ function SettingsPanel() {
         <div><label className={label}>Payee Name</label><input className={input} value={s.payeeName} onChange={(e) => setS({ ...s, payeeName: e.target.value })} /></div>
         <div><label className={label}>QR Image URL (optional)</label><input className={input} placeholder="https://…" value={s.qrImage || ""} onChange={(e) => setS({ ...s, qrImage: e.target.value })} /></div>
         <div><label className={label}>Instructions</label><textarea rows={4} className={input} value={s.instructions} onChange={(e) => setS({ ...s, instructions: e.target.value })} /></div>
-        <button onClick={save} disabled={saving}
-          className="w-full py-3 bg-white text-black text-[10px] tracking-[0.2em] uppercase font-medium hover:bg-white/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
+        <button onClick={save} disabled={saving} className="w-full py-3 bg-white text-black text-[10px] tracking-[0.2em] uppercase font-medium hover:bg-white/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
           {saving ? <><Loader2 size={14} className="animate-spin" /> Saving…</> : saved ? <><Check size={14} /> Saved</> : "Save Settings"}
         </button>
       </div>
@@ -843,7 +752,6 @@ function SettingsPanel() {
   );
 }
 
-/* ═══════════════ IMAGE UPLOADER ═══════════════ */
 /* ═══════════════ SHARED UI ═══════════════ */
 function Header({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) {
   return (
