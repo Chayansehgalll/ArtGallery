@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import * as paintingService from "../services/paintingService.js";
 import { sendSuccess, paginate } from "../utils/response.js";
 import { createPaintingSchema } from "../validations/painting.js";
+import { uploadStream }  from "../config/cloudinary.js";
 
 function parseFormArray(value: unknown): string[] {
   if (!value) return [];
@@ -92,7 +93,7 @@ export async function getGallery(req: Request, res: Response, next: NextFunction
   }
 }
 
-// Admin Creation Re-implemented
+// Admin Creation Re-implemented using Cloudinary Streams with Memory Buffers
 export async function create(req: Request, res: Response, next: NextFunction) {
   try {
     const files = req.files as { 
@@ -101,12 +102,27 @@ export async function create(req: Request, res: Response, next: NextFunction) {
       images?: Express.Multer.File[];
     } | undefined;
     
-    const coverFile = files?.coverImage?.[0]?.path;
-    const mainFile = files?.mainImage?.[0]?.path;
-    const additionalFiles = files?.images?.map(f => f.path) || [];
+    // 1. Process files asynchronously from RAM straight onto Cloudinary
+    let coverImageUrl: string | undefined = undefined;
+    let mainImageUrl: string | undefined = undefined;
+    const additionalImageUrls: string[] = [];
+
+    if (files?.coverImage?.[0]) {
+      coverImageUrl = await uploadStream(files.coverImage[0].buffer, "paintings/covers");
+    }
+    if (files?.mainImage?.[0]) {
+      mainImageUrl = await uploadStream(files.mainImage[0].buffer, "paintings/mains");
+    }
+    if (files?.images && files.images.length > 0) {
+      for (const file of files.images) {
+        const url = await uploadStream(file.buffer, "paintings/gallery");
+        additionalImageUrls.push(url);
+      }
+    }
 
     const bodyData = { ...req.body };
 
+    // 2. Safely capture arrays mapped out of FormData elements
     if (bodyData.frameOptions !== undefined) {
       bodyData.frameOptions = parseFormArray(bodyData.frameOptions);
     }
@@ -114,37 +130,52 @@ export async function create(req: Request, res: Response, next: NextFunction) {
       bodyData.tags = parseFormArray(bodyData.tags);
     }
 
-    // Unset blanks cleanly to avoid coercion crashing
+    // Unset empty placeholders cleanly to avoid conversion layout bugs
     for (const key in bodyData) {
-      if (bodyData[key] === "") {
+      if (bodyData[key] === "" || bodyData[key] === "undefined" || bodyData[key] === "null") {
         bodyData[key] = undefined;
       }
     }
 
-    const data = createPaintingSchema.parse(bodyData);
+    // 3. Explicit Zod validation handler wrapper
+    let parsedData;
+    try {
+      parsedData = createPaintingSchema.parse(bodyData);
+    } catch (zodErr: any) {
+      if (zodErr.errors) {
+        const msg = zodErr.errors.map((e: any) => `${e.path.join(".")}: ${e.message}`).join(", ");
+        return res.status(400).json({ success: false, message: `Validation Error: ${msg}` });
+      }
+      return res.status(400).json({ success: false, message: "Validation parameters mismatch." });
+    }
 
-    let mainImage = mainFile || data.mainImage || data.images?.[0] || undefined;
-    let coverImage = coverFile || data.coverImage || mainImage || undefined;
+    // 4. Fallback hierarchy assigning Cloudinary secure URL configurations
+    let mainImage = mainImageUrl || parsedData.mainImage || parsedData.images?.[0] || undefined;
+    let coverImage = coverImageUrl || parsedData.coverImage || mainImage || undefined;
     
     if (mainImage && !coverImage) {
       coverImage = mainImage;
     }
 
-    const images = additionalFiles.length > 0 ? additionalFiles : (data.images && data.images.length ? data.images : []);
+    const images = additionalImageUrls.length > 0 
+      ? additionalImageUrls 
+      : (parsedData.images && parsedData.images.length ? parsedData.images : []);
     
     if (mainImage && !images.includes(mainImage)) {
       images.unshift(mainImage);
     }
 
+    // 5. Commit properties cleanly to Prisma Service layer
     const painting = await paintingService.createPainting({
-      ...data,
-      originalPrice: data.originalPrice ?? undefined,
-      story: data.story ?? undefined,
+      ...parsedData,
+      originalPrice: parsedData.originalPrice ?? undefined,
+      story: parsedData.story ?? undefined,
       coverImage: coverImage ?? undefined,
       mainImage: mainImage ?? undefined,
       images: images.length > 0 ? images : [],
     });
-    sendSuccess(res, painting, "Painting created", 201);
+
+    sendSuccess(res, painting, "Painting profile recorded successfully", 201);
   } catch (err) {
     next(err);
   }

@@ -342,6 +342,10 @@ function PaintingForm({
       year: Number(currentForm.year || 2024),
       edition: Number(currentForm.edition || 1),
       editionTotal: Number(currentForm.editionTotal || 1),
+      isOriginal: currentForm.isOriginal === undefined ? true : !!currentForm.isOriginal,
+      isFeatured: !!currentForm.isFeatured,
+      isActive: currentForm.isActive === undefined ? true : !!currentForm.isActive,
+      inStock: currentForm.inStock === undefined ? true : !!currentForm.inStock,
     };
     
     const files = {

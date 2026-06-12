@@ -50,29 +50,47 @@ export async function getAllPaintings(query: {
   const { page = 1, limit = 12 } = query;
   const skip = (page - 1) * limit;
 
+  // Public collections should always default to active items
   const where: Prisma.PaintingWhereInput = {
     isActive: true,
   };
 
-  if (query.category) {
-    where.category = { slug: query.category };
+  // FIX: Only apply the category filter if it's a real category slug (not empty, or "all")
+  if (
+    query.category && 
+    query.category.trim() !== "" && 
+    query.category.toLowerCase() !== "all" &&
+    query.category !== "undefined"
+  ) {
+    where.category = { slug: query.category.trim() };
   }
-  if (query.style) {
-    where.style = query.style;
+
+  // FIX: Only apply style filter if it's not indicating "all"
+  if (
+    query.style && 
+    query.style.trim() !== "" && 
+    query.style.toLowerCase() !== "all" &&
+    query.style !== "undefined"
+  ) {
+    where.style = query.style.trim();
   }
+
   if (query.minPrice !== undefined || query.maxPrice !== undefined) {
     where.price = {
       ...(query.minPrice !== undefined && { gte: query.minPrice }),
       ...(query.maxPrice !== undefined && { lte: query.maxPrice }),
     };
   }
-  if (query.search) {
+
+  if (query.search && query.search.trim() !== "") {
+    const searchClean = query.search.trim();
     where.OR = [
-      { title: { contains: query.search, mode: "insensitive" } },
-      { description: { contains: query.search, mode: "insensitive" } },
-      { tags: { hasSome: [query.search] } },
+      { title: { contains: searchClean, mode: "insensitive" } },
+      { description: { contains: searchClean, mode: "insensitive" } },
+      { tags: { hasSome: [searchClean] } },
     ];
   }
+
   if (query.featured) {
     where.isFeatured = true;
   }

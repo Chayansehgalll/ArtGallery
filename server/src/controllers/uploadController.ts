@@ -1,46 +1,32 @@
 import type { Request, Response, NextFunction } from "express";
-import fs from "fs";
-import { env } from "../config/env.js";
-import { uploadToCloudinary } from "../config/cloudinary.js";
+import { uploadStream } from "../config/cloudinary.js";
 import { sendSuccess } from "../utils/response.js";
 import { ValidationError } from "../utils/errors.js";
 
-const cloudinaryConfigured =
-  !!env.cloudinaryCloudName && !!env.cloudinaryApiKey && !!env.cloudinaryApiSecret;
-
 /**
- * Upload one or more images.
- * - If Cloudinary credentials exist → uploads there, returns CDN URLs,
- *   deletes the temp local file.
- * - Otherwise → keeps the file in /uploads and returns a local URL
- *   (served statically). Works out-of-the-box with zero config.
+ * Handles generic multi-image uploads from the admin dashboard via RAM memory buffers
  */
 export async function uploadImages(req: Request, res: Response, next: NextFunction) {
   try {
+    // Multer array updates place file data elements within req.files
     const files = req.files as Express.Multer.File[] | undefined;
+
     if (!files || files.length === 0) {
-      throw new ValidationError("No files received");
+      throw new ValidationError("No image files provided for upload");
     }
 
-    const baseUrl = `${req.protocol}://${req.get("host")}`;
-    const urls: string[] = [];
+    const uploadedUrls: string[] = [];
 
+    // Stream each file buffer sequentially up onto Cloudinary securely
     for (const file of files) {
-      if (cloudinaryConfigured) {
-        const { url } = await uploadToCloudinary(file.path);
-        urls.push(url);
-        // Remove temp file after uploading to the CDN
-        fs.unlink(file.path, () => {});
-      } else {
-        // Local fallback — served from /uploads
-        urls.push(`${baseUrl}/uploads/${file.filename}`);
-      }
+      const url = await uploadStream(file.buffer, "gallery/uploads");
+      uploadedUrls.push(url);
     }
 
     sendSuccess(
-      res,
-      { urls, storage: cloudinaryConfigured ? "cloudinary" : "local" },
-      "Images uploaded"
+      res, 
+      { urls: uploadedUrls, storage: "cloudinary" }, 
+      "Images uploaded successfully to Cloudinary cloud network storage"
     );
   } catch (err) {
     next(err);

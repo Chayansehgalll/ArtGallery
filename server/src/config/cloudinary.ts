@@ -1,40 +1,39 @@
 import { v2 as cloudinary } from "cloudinary";
-import { env } from "./env.js";
+import dotenv from "dotenv";
 
+dotenv.config();
+
+// Initialize Cloudinary with environmental configuration variables
 cloudinary.config({
-  cloud_name: env.cloudinaryCloudName,
-  api_key: env.cloudinaryApiKey,
-  api_secret: env.cloudinaryApiSecret,
-  secure: true,
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+/**
+ * Uploads a file memory buffer directly to Cloudinary via a stream wrapper interface
+ * @param fileBuffer - The memory buffer from req.file / req.files
+ * @param folder - Destination path folder name inside your Cloudinary storage dashboard
+ */
+export function uploadStream(fileBuffer: Buffer, folder: string = "art_gallery"): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder },
+      (error, result) => {
+        if (error) {
+          return reject(error);
+        }
+        if (!result) {
+          return reject(new Error("Cloudinary upload stream returned an empty response."));
+        }
+        // Return the secure cloud HTTPS asset link
+        resolve(result.secure_url);
+      }
+    );
+    
+    // Close the stream pipeline writing out the raw memory buffer bits
+    stream.end(fileBuffer);
+  });
+}
+
 export default cloudinary;
-
-export async function uploadToCloudinary(
-  filePath: string,
-  folder: string = "yashika/paintings"
-): Promise<{ url: string; publicId: string }> {
-  const result = await cloudinary.uploader.upload(filePath, {
-    folder,
-    resource_type: "image",
-    transformation: [
-      { quality: "auto:good", fetch_format: "auto" },
-    ],
-  });
-  return { url: result.secure_url, publicId: result.public_id };
-}
-
-export async function uploadModelToCloudinary(
-  filePath: string,
-  folder: string = "yashika/models"
-) {
-  const result = await cloudinary.uploader.upload(filePath, {
-    folder,
-    resource_type: "auto",
-  });
-  return { url: result.secure_url, publicId: result.public_id };
-}
-
-export async function deleteFromCloudinary(publicId: string) {
-  return cloudinary.uploader.destroy(publicId);
-}

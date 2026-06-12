@@ -132,17 +132,17 @@ export function createPainting(data: Record<string, unknown>, files?: { coverIma
   const token = getToken();
   const fd = new FormData();
   
-  // Add all form fields
+  // Clean up and append form fields safely
   Object.entries(data).forEach(([key, value]) => {
     if (Array.isArray(value)) {
-      // Send arrays as JSON strings so backend can parse them
+      // Send as a JSON string so parseFormArray on the backend handles it safely
       fd.append(key, JSON.stringify(value));
-    } else if (value !== null && value !== undefined) {
+    } else if (value !== null && value !== undefined && value !== "") {
       fd.append(key, String(value));
     }
   });
   
-  // Add file uploads
+  // Append binary image attachments safely
   if (files?.coverImage) fd.append("coverImage", files.coverImage);
   if (files?.mainImage) fd.append("mainImage", files.mainImage);
   if (files?.images && files.images.length > 0) {
@@ -158,14 +158,7 @@ export function createPainting(data: Record<string, unknown>, files?: { coverIma
         body: fd,
       });
       
-      let json: any;
-      try {
-        json = await res.json();
-      } catch (parseErr) {
-        console.error("Failed to parse response JSON:", await res.text());
-        resolve({ ok: false, message: `Server error: ${res.status}` });
-        return;
-      }
+      const json = await res.json().catch(() => ({}));
       
       if (!res.ok) {
         resolve({ ok: false, message: json?.message || `Error ${res.status}` });
