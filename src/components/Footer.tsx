@@ -151,21 +151,21 @@ export default function Footer() {
               <li className="flex items-start gap-3">
                 <MapPin size={14} className="text-white/20 mt-0.5 flex-shrink-0" />
                 <span className="text-white/40 text-xs leading-relaxed">
-                  123 Gallery Row
+                  South extension
                   <br />
-                  New York, NY 10012
+                  New Delhi, India 110049
                 </span>
               </li>
               <li className="flex items-center gap-3">
                 <Phone size={14} className="text-white/20 flex-shrink-0" />
                 <span className="text-white/40 text-xs">
-                  +1 (212) 555-0147
+                  +91 7042089820
                 </span>
               </li>
               <li className="flex items-center gap-3">
                 <Mail size={14} className="text-white/20 flex-shrink-0" />
                 <span className="text-white/40 text-xs">
-                  hello@yashika.art
+                  chayansehgal3@gmail.com
                 </span>
               </li>
             </ul>

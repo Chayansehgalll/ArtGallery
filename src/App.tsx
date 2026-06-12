@@ -18,9 +18,10 @@ import CheckoutPage from "./components/CheckoutPage";
 import CartDrawer from "./components/CartDrawer";
 import Footer from "./components/Footer";
 import AdminApp from "./admin/AdminApp";
+import WishlistPage from "./components/WishlistPage";
 
 /* ── Route <-> view mapping ─────────────────────────────── */
-type View = "home" | "collection" | "product" | "artist" | "gallery" | "ar" | "checkout";
+type View = "home" | "collection" | "product" | "artist" | "gallery" | "ar" | "checkout" | "wishlist";
 
 const VIEW_TO_PATH: Record<View, string> = {
   home: "/",
@@ -30,6 +31,7 @@ const VIEW_TO_PATH: Record<View, string> = {
   gallery: "/gallery",
   checkout: "/checkout",
   ar: "/product",
+  wishlist: "/wishlist",
 };
 
 function pathToView(path: string): View {
@@ -38,6 +40,7 @@ function pathToView(path: string): View {
   if (path.startsWith("/artists")) return "artist";
   if (path.startsWith("/gallery")) return "gallery";
   if (path.startsWith("/checkout")) return "checkout";
+  if (path.startsWith("/wishlist")) return "wishlist";
   return "home";
 }
 
@@ -171,6 +174,7 @@ export default function App() {
           <Route path="/artists" element={<Page><ArtistSection /></Page>} />
           <Route path="/gallery" element={<Page className="h-screen"><GalleryExperience /></Page>} />
           <Route path="/checkout" element={<Page><CheckoutPage /></Page>} />
+          <Route path="/wishlist" element={<Page><WishlistPage /></Page>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AnimatePresence>
