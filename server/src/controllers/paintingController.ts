@@ -93,7 +93,6 @@ export async function getGallery(req: Request, res: Response, next: NextFunction
   }
 }
 
-// Admin Creation Re-implemented using Cloudinary Streams with Memory Buffers
 export async function create(req: Request, res: Response, next: NextFunction) {
   try {
     const files = req.files as { 
@@ -102,7 +101,6 @@ export async function create(req: Request, res: Response, next: NextFunction) {
       images?: Express.Multer.File[];
     } | undefined;
     
-    // 1. Process files asynchronously from RAM straight onto Cloudinary
     let coverImageUrl: string | undefined = undefined;
     let mainImageUrl: string | undefined = undefined;
     const additionalImageUrls: string[] = [];
@@ -122,7 +120,6 @@ export async function create(req: Request, res: Response, next: NextFunction) {
 
     const bodyData = { ...req.body };
 
-    // 2. Safely capture arrays mapped out of FormData elements
     if (bodyData.frameOptions !== undefined) {
       bodyData.frameOptions = parseFormArray(bodyData.frameOptions);
     }
@@ -130,14 +127,12 @@ export async function create(req: Request, res: Response, next: NextFunction) {
       bodyData.tags = parseFormArray(bodyData.tags);
     }
 
-    // Unset empty placeholders cleanly to avoid conversion layout bugs
     for (const key in bodyData) {
       if (bodyData[key] === "" || bodyData[key] === "undefined" || bodyData[key] === "null") {
         bodyData[key] = undefined;
       }
     }
 
-    // 3. Explicit Zod validation handler wrapper
     let parsedData;
     try {
       parsedData = createPaintingSchema.parse(bodyData);
@@ -149,7 +144,6 @@ export async function create(req: Request, res: Response, next: NextFunction) {
       return res.status(400).json({ success: false, message: "Validation parameters mismatch." });
     }
 
-    // 4. Fallback hierarchy assigning Cloudinary secure URL configurations
     let mainImage = mainImageUrl || parsedData.mainImage || parsedData.images?.[0] || undefined;
     let coverImage = coverImageUrl || parsedData.coverImage || mainImage || undefined;
     
@@ -165,7 +159,6 @@ export async function create(req: Request, res: Response, next: NextFunction) {
       images.unshift(mainImage);
     }
 
-    // 5. Commit properties cleanly to Prisma Service layer
     const painting = await paintingService.createPainting({
       ...parsedData,
       originalPrice: parsedData.originalPrice ?? undefined,
@@ -182,7 +175,84 @@ export async function create(req: Request, res: Response, next: NextFunction) {
 }
 
 export async function update(req: Request, res: Response, next: NextFunction) {
-  return res.status(405).json({ success: false, message: "Update painting is disabled" });
+  try {
+    const id = req.params.id;
+    const files = req.files as { 
+      coverImage?: Express.Multer.File[];
+      mainImage?: Express.Multer.File[];
+      images?: Express.Multer.File[];
+    } | undefined;
+    
+    let coverImageUrl: string | undefined = undefined;
+    let mainImageUrl: string | undefined = undefined;
+    const additionalImageUrls: string[] = [];
+
+    if (files?.coverImage?.[0]) {
+      coverImageUrl = await uploadStream(files.coverImage[0].buffer, "paintings/covers");
+    }
+    if (files?.mainImage?.[0]) {
+      mainImageUrl = await uploadStream(files.mainImage[0].buffer, "paintings/mains");
+    }
+    if (files?.images && files.images.length > 0) {
+      for (const file of files.images) {
+        const url = await uploadStream(file.buffer, "paintings/gallery");
+        additionalImageUrls.push(url);
+      }
+    }
+
+    const bodyData = { ...req.body };
+
+    if (bodyData.frameOptions !== undefined) {
+      bodyData.frameOptions = parseFormArray(bodyData.frameOptions);
+    }
+    if (bodyData.tags !== undefined) {
+      bodyData.tags = parseFormArray(bodyData.tags);
+    }
+    if (bodyData.images !== undefined) {
+      bodyData.images = parseFormArray(bodyData.images);
+    }
+
+    for (const key in bodyData) {
+      if (bodyData[key] === "" || bodyData[key] === "undefined" || bodyData[key] === "null") {
+        bodyData[key] = undefined;
+      }
+    }
+
+    // CRITICAL FIX: Explicitly strip layout parameters, relational objects, and metadata timestamps
+    delete bodyData.id;
+    delete bodyData.category;
+    delete bodyData.slug;
+    delete bodyData.createdAt;
+    delete bodyData.updatedAt;
+
+    const payload: Record<string, any> = {
+      ...bodyData,
+      ...(bodyData.price !== undefined && { price: Number(bodyData.price) }),
+      ...(bodyData.originalPrice !== undefined && { originalPrice: bodyData.originalPrice ? Number(bodyData.originalPrice) : null }),
+      ...(bodyData.width !== undefined && { width: Number(bodyData.width) }),
+      ...(bodyData.height !== undefined && { height: Number(bodyData.height) }),
+      ...(bodyData.year !== undefined && { year: Number(bodyData.year) }),
+      ...(bodyData.edition !== undefined && { edition: Number(bodyData.edition) }),
+      ...(bodyData.editionTotal !== undefined && { editionTotal: Number(bodyData.editionTotal) }),
+      ...(bodyData.isOriginal !== undefined && { isOriginal: bodyData.isOriginal === "true" || bodyData.isOriginal === true }),
+      ...(bodyData.isFeatured !== undefined && { isFeatured: bodyData.isFeatured === "true" || bodyData.isFeatured === true }),
+      ...(bodyData.isActive !== undefined && { isActive: bodyData.isActive === "true" || bodyData.isActive === true }),
+      ...(bodyData.inStock !== undefined && { inStock: bodyData.inStock === "true" || bodyData.inStock === true }),
+    };
+
+    if (coverImageUrl) payload.coverImage = coverImageUrl;
+    if (mainImageUrl) payload.mainImage = mainImageUrl;
+    
+    const combinedImages = [...(payload.images || []), ...additionalImageUrls];
+    if (combinedImages.length > 0) {
+      payload.images = combinedImages;
+    }
+
+    const updatedPainting = await paintingService.updatePainting(id, payload);
+    sendSuccess(res, updatedPainting, "Painting updated successfully");
+  } catch (err) {
+    next(err);
+  }
 }
 
 export async function remove(req: Request, res: Response, next: NextFunction) {

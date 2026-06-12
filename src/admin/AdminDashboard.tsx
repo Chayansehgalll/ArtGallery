@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Routes, Route, NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Image as ImageIcon, ShoppingBag, BadgeIndianRupee,
-  Tags, Settings, LogOut, Plus, Trash2, X, Check, Loader2,
+  Tags, Settings, LogOut, Plus, Trash2, Edit3, X, Check, Loader2,
   TrendingUp, Users, Package, IndianRupee, RefreshCw, Eye, Upload,
 } from "lucide-react";
 import * as api from "./api";
@@ -199,6 +199,7 @@ function Paintings() {
   const [cats, setCats] = useState<AdminCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [editingPainting, setEditingPainting] = useState<AdminPainting | null>(null);
   const [creating, setCreating] = useState(false);
 
   const load = useCallback(async () => {
@@ -232,8 +233,8 @@ function Paintings() {
         {items.map((p) => (
           <div key={p.id} className="border border-white/8 bg-white/[0.02] overflow-hidden group">
             <div className="aspect-[4/3] bg-white/5 overflow-hidden relative">
-              {p.images?.[0] ? (
-                <img src={p.images[0]} alt={p.title} className="w-full h-full object-cover" />
+              {p.coverImage || p.images?.[0] ? (
+                <img src={p.coverImage || p.images[0]} alt={p.title} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-white/15"><ImageIcon size={32} /></div>
               )}
@@ -247,7 +248,10 @@ function Paintings() {
               <p className="text-white/30 text-[10px] tracking-wider uppercase mt-0.5">{p.category?.name || "—"}</p>
               <div className="flex items-center justify-between mt-3">
                 <span className="text-white/70 text-sm">{money(p.price)}</span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setEditingPainting(p)} className="text-white/40 hover:text-white transition-colors flex items-center gap-1 text-xs">
+                    <Edit3 size={14} /> Edit
+                  </button>
                   <button onClick={() => remove(p.id)} className="text-white/40 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
                 </div>
               </div>
@@ -263,18 +267,30 @@ function Paintings() {
           onSaved={() => { setCreating(false); load(); }}
         />
       )}
+
+      {editingPainting && (
+        <PaintingForm
+          painting={editingPainting}
+          categories={cats}
+          onClose={() => setEditingPainting(null)}
+          onSaved={() => { setEditingPainting(null); load(); }}
+        />
+      )}
     </div>
   );
 }
 
 function PaintingForm({
-  categories, onClose, onSaved,
+  painting, categories, onClose, onSaved,
 }: {
+  painting?: AdminPainting;
   categories: AdminCategory[];
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const initialForm = { ...EMPTY_PAINTING, categoryId: categories[0]?.id || "" };
+  const isEdit = !!painting;
+  const initialForm = isEdit ? { ...painting } : { ...EMPTY_PAINTING, categoryId: categories[0]?.id || "" };
+  
   const [form, setForm] = useState<Record<string, unknown>>(initialForm);
   const formRef = useRef<Record<string, unknown>>(initialForm);
 
@@ -285,8 +301,10 @@ function PaintingForm({
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
   const [additionalImagesFiles, setAdditionalImagesFiles] = useState<File[]>([]);
-  const [coverImagePreview, setCoverImagePreview] = useState<string>("");
-  const [mainImagePreview, setMainImagePreview] = useState<string>("");
+  
+  const [coverImagePreview, setCoverImagePreview] = useState<string>(painting?.coverImage || "");
+  const [mainImagePreview, setMainImagePreview] = useState<string>(painting?.mainImage || "");
+  const [retainedAdditionalImages, setRetainedAdditionalImages] = useState<string[]>(painting?.images || []);
   
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
@@ -337,6 +355,7 @@ function PaintingForm({
     const payload = {
       ...currentForm,
       price: Number(currentForm.price || 0),
+      originalPrice: currentForm.originalPrice ? Number(currentForm.originalPrice) : null,
       width: Number(currentForm.width || 24),
       height: Number(currentForm.height || 36),
       year: Number(currentForm.year || 2024),
@@ -346,6 +365,8 @@ function PaintingForm({
       isFeatured: !!currentForm.isFeatured,
       isActive: currentForm.isActive === undefined ? true : !!currentForm.isActive,
       inStock: currentForm.inStock === undefined ? true : !!currentForm.inStock,
+      // For updates, send the array of already hosted images we want to keep
+      images: retainedAdditionalImages,
     };
     
     const files = {
@@ -354,7 +375,13 @@ function PaintingForm({
       images: additionalImagesFiles.length > 0 ? additionalImagesFiles : undefined,
     };
     
-    const res = await api.createPainting(payload, files);
+    let res;
+    if (isEdit && painting?.id) {
+      res = await api.updatePainting(painting.id, payload, files);
+    } else {
+      res = await api.createPainting(payload, files);
+    }
+
     setSaving(false);
     if (res.ok) onSaved();
     else setErr(res.message || "Save failed");
@@ -367,7 +394,7 @@ function PaintingForm({
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-[#0a0a0a] border border-white/10 w-full max-w-3xl my-8 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b border-white/5 sticky top-0 bg-[#0a0a0a]">
-          <h3 className="text-white text-base font-light">Add Painting</h3>
+          <h3 className="text-white text-base font-light">{isEdit ? "Edit Painting" : "Add Painting"}</h3>
           <button onClick={onClose} className="text-white/40 hover:text-white"><X size={18} /></button>
         </div>
 
@@ -411,10 +438,10 @@ function PaintingForm({
             <div><label className={label}>Total Editions</label><input type="number" className={input} value={(form?.editionTotal as number) || ""} onChange={(e) => set("editionTotal", e.target.value)} /></div>
           </div>
 
-          {/* ═══ Cover Image Upload ═══ */}
+          {/* ═══ Cover Image Upload / Retain ═══ */}
           <div className="border border-white/10 bg-white/[0.02] p-4">
             <h4 className="text-white text-sm font-light mb-1">Cover Image (Thumbnail)</h4>
-            <p className="text-white/40 text-[10px] mb-3">Optional. Used on homepage cards, collection pages, search results. If not provided, the main image will be used.</p>
+            <p className="text-white/40 text-[10px] mb-3">Used on grid card layouts. Upload a new asset to overwrite current configurations.</p>
             
             {coverImagePreview && (
               <div className="mb-3 relative inline-block">
@@ -426,14 +453,14 @@ function PaintingForm({
             <label className="block border border-dashed border-white/15 hover:border-white/30 bg-white/[0.02] cursor-pointer p-4 text-center transition-colors">
               <input type="file" accept="image/*" className="hidden" onChange={handleCoverImageChange} />
               <Upload size={20} className="text-white/30 mx-auto mb-1" />
-              <p className="text-white/50 text-[10px]">Click to upload cover image</p>
+              <p className="text-white/50 text-[10px]">Click to upload new cover image</p>
             </label>
           </div>
 
-          {/* ═══ Main Image Upload ═══ */}
+          {/* ═══ Main Image Upload / Retain ═══ */}
           <div className="border border-white/10 bg-white/[0.02] p-4">
             <h4 className="text-white text-sm font-light mb-1">Main Painting Image</h4>
-            <p className="text-white/40 text-[10px] mb-3">Full-resolution artwork shown on details page. Required for proper display.</p>
+            <p className="text-white/40 text-[10px] mb-3">Full-resolution artwork shown on details page.</p>
             
             {mainImagePreview && (
               <div className="mb-3 relative inline-block">
@@ -445,30 +472,48 @@ function PaintingForm({
             <label className="block border border-dashed border-white/15 hover:border-white/30 bg-white/[0.02] cursor-pointer p-4 text-center transition-colors">
               <input type="file" accept="image/*" className="hidden" onChange={handleMainImageChange} />
               <Upload size={20} className="text-white/30 mx-auto mb-1" />
-              <p className="text-white/50 text-[10px]">Click to upload main painting image</p>
+              <p className="text-white/50 text-[10px]">Click to upload new main painting image</p>
             </label>
           </div>
 
-          {/* ═══ Additional Gallery Images ═══ */}
+          {/* ═══ Additional Gallery Images (Retain + Upload) ═══ */}
           <div className="border border-white/10 bg-white/[0.02] p-4">
             <h4 className="text-white text-sm font-light mb-3">Additional Gallery Images</h4>
-            <p className="text-white/40 text-[10px] mb-3">Extra images for gallery view (optional).</p>
             
+            {/* Display Hosted Images Already in Database */}
+            {retainedAdditionalImages.length > 0 && (
+              <div className="mb-4">
+                <p className="text-white/40 text-[10px] mb-2 uppercase tracking-wider">Currently Stored:</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {retainedAdditionalImages.map((imgUrl, i) => (
+                    <div key={i} className="relative aspect-square bg-white/5 border border-white/10 overflow-hidden">
+                      <img src={imgUrl} alt="Retained asset" className="w-full h-full object-cover" />
+                      <button type="button" onClick={() => setRetainedAdditionalImages(prev => prev.filter(u => u !== imgUrl))} className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white flex items-center justify-center"><X size={12} /></button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Display newly picked local file buffers */}
             {additionalImagesFiles.length > 0 && (
-              <div className="mb-3 grid grid-cols-4 gap-2">
-                {additionalImagesFiles.map((file, i) => (
-                  <div key={i} className="relative aspect-square bg-white/5 border border-white/10 overflow-hidden">
-                    <img src={URL.createObjectURL(file)} alt={`Additional ${i}`} className="w-full h-full object-cover" />
-                    <button type="button" onClick={() => setAdditionalImagesFiles(prev => prev.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 w-5 h-5 bg-black/70 text-white flex items-center justify-center"><X size={12} /></button>
-                  </div>
-                ))}
+              <div className="mb-4">
+                <p className="text-white/40 text-[10px] mb-2 uppercase tracking-wider">New Additions to Upload:</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {additionalImagesFiles.map((file, i) => (
+                    <div key={i} className="relative aspect-square bg-white/5 border border-white/10 overflow-hidden">
+                      <img src={URL.createObjectURL(file)} alt={`Additional local ${i}`} className="w-full h-full object-cover" />
+                      <button type="button" onClick={() => setAdditionalImagesFiles(prev => prev.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 w-5 h-5 bg-black/70 text-white flex items-center justify-center"><X size={12} /></button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
             
             <label className="block border border-dashed border-white/15 hover:border-white/30 bg-white/[0.02] cursor-pointer p-4 text-center transition-colors">
               <input type="file" accept="image/*" multiple className="hidden" onChange={handleAdditionalImagesChange} />
               <Upload size={20} className="text-white/30 mx-auto mb-1" />
-              <p className="text-white/50 text-[10px]">Click to upload additional images</p>
+              <p className="text-white/50 text-[10px]">Click to append more extra images</p>
             </label>
           </div>
 
@@ -493,7 +538,7 @@ function PaintingForm({
 
         <div className="flex gap-3 p-5 border-t border-white/5 sticky bottom-0 bg-[#0a0a0a]">
           <button onClick={save} disabled={saving} className="flex-1 py-3 bg-white text-black text-[10px] tracking-[0.2em] uppercase font-medium hover:bg-white/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
-            {saving ? <><Loader2 size={14} className="animate-spin" /> Saving…</> : <><Check size={14} /> Save</>}
+            {saving ? <><Loader2 size={14} className="animate-spin" /> Saving…</> : <><Check size={14} /> Save Changes</>}
           </button>
           <button onClick={onClose} className="px-6 py-3 border border-white/10 text-white/50 text-[10px] tracking-[0.2em] uppercase hover:text-white transition-colors">Cancel</button>
         </div>
