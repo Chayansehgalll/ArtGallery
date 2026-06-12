@@ -16,9 +16,6 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
-// Local category list filter tab configuration matching backend slugs
-const displayCategories = ["All", "Abstract", "Minimalism", "Exhibition", "Contemporary"];
-
 export default function Collection() {
   const {
     setCurrentView,
@@ -40,7 +37,7 @@ export default function Collection() {
     clearFilters,
   } = useStore();
 
-  const { paintings: artworks } = usePaintings();
+  const { paintings: artworks, refresh } = usePaintings();
 
   const [showFilters, setShowFilters] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -49,10 +46,24 @@ export default function Collection() {
   const gridRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
 
-  // 1. Core Reactive Filtering Logic matching modern backend nested objects
+  // Revalidate and fetch fresh data from the backend when the Collection page loads
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  // Dynamically extract categories present in the database response to prevent sync failures
+  const displayCategories = useMemo(() => {
+    const categoriesSet = new Set<string>();
+    artworks.forEach((art) => {
+      const catName = typeof art.category === "object" ? art.category?.name : art.category;
+      if (catName) categoriesSet.add(catName);
+    });
+    return ["All", ...Array.from(categoriesSet)];
+  }, [artworks]);
+
+  // Core Reactive Filtering Logic
   const filteredArtworks = useMemo(() => {
     return artworks.filter((art) => {
-      // Handle backend category relational matching cleanly
       if (filterCategory !== "All") {
         const catSlug = typeof art.category === "object" ? art.category?.name : art.category;
         if (catSlug?.toLowerCase() !== filterCategory.toLowerCase()) return false;
@@ -81,10 +92,14 @@ export default function Collection() {
     searchQuery,
   ]);
 
-  const spotlightArtwork =
-    filteredArtworks.find((art) => art.id === spotlightId) ??
-    filteredArtworks[0] ??
-    artworks[0];
+  const spotlightArtwork = useMemo(() => {
+    return (
+      filteredArtworks.find((art) => art.id === spotlightId) ??
+      filteredArtworks[0] ??
+      artworks[0] ??
+      null
+    );
+  }, [filteredArtworks, spotlightId, artworks]);
 
   useEffect(() => {
     if (filteredArtworks.length === 0) return;
@@ -270,7 +285,7 @@ export default function Collection() {
                 key={cat}
                 onClick={() => setFilterCategory(cat)}
                 className={`px-5 py-2.5 text-[10px] tracking-[0.2em] uppercase font-medium border transition-all whitespace-nowrap ${
-                  filterCategory === cat
+                  filterCategory.toLowerCase() === cat.toLowerCase()
                     ? "bg-white text-black border-white"
                     : "border-white/10 text-white/50 hover:text-white hover:border-white/30"
                 }`}
