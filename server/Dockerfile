@@ -1,33 +1,47 @@
-FROM node:20-alpine
-
-# Install native compilation requirements for tools like bcrypt
-RUN apk add --no-cache libc6-compat python3 make g++
+FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy dependency mappings
 COPY package*.json ./
+COPY prisma ./prisma/
 
-# Install all dependencies (production + development types needed for tsc build)
 RUN npm install
 
-# Pre-generate Prisma client bindings
-COPY prisma ./prisma/
-RUN npx prisma generate
-
-# Copy the rest of the backend repository files
 COPY . .
 
-# Compile TypeScript to JavaScript (generates the dist/ folder)
-RUN npm run build
+RUN npm install \
+cloudinary \
+express-rate-limit \
+express \
+cors \
+helmet \
+morgan \
+compression \
+cookie-parser \
+jsonwebtoken \
+bcryptjs \
+zod \
+multer \
+nodemailer \
+@prisma/client
 
-# Prune development typing files to keep the container fast and secure
-RUN npm prune --production
+RUN npm install -D \
+typescript \
+@types/node \
+@types/express \
+@types/cors \
+@types/compression \
+@types/cookie-parser \
+@types/jsonwebtoken \
+@types/bcryptjs \
+@types/morgan \
+@types/multer \
+@types/nodemailer
+
+RUN npx prisma generate
+
+RUN npx tsc
 
 EXPOSE 8080
 
-ENV PORT=8080
-ENV NODE_ENV=production
-
-# Safely run pending migrations and boot up the Express server
-CMD ["sh", "-c", "npx prisma migrate deploy && npm run start"]
+CMD npx prisma migrate deploy && npm run start
