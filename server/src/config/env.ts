@@ -6,7 +6,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 export const env = {
-  port: parseInt(process.env.PORT || "4000", 10),
+  port: parseInt(process.env.PORT || "8080", 10),
   nodeEnv: process.env.NODE_ENV || "development",
   frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173",
 
