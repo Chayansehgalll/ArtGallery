@@ -3,12 +3,18 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+
+// Attempt to load local environment, but fallback safely if running inside Docker environment
+try {
+  dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+} catch (e) {
+  dotenv.config();
+}
 
 export const env = {
   port: parseInt(process.env.PORT || "8080", 10),
-  nodeEnv: process.env.NODE_ENV || "development",
-  frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173",
+  nodeEnv: process.env.NODE_ENV || "production", // Default to production inside container
+  frontendUrl: process.env.FRONTEND_URL || "https://yb-gallery.vercel.app",
 
   // Database
   databaseUrl: process.env.DATABASE_URL!,
@@ -20,8 +26,8 @@ export const env = {
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "30d",
 
   // Admin
-  adminEmail: process.env.ADMIN_EMAIL || "admin@yashika.art",
-  adminPassword: process.env.ADMIN_PASSWORD || "Admin@Yashika2024!",
+  adminEmail: process.env.ADMIN_EMAIL,
+  adminPassword: process.env.ADMIN_PASSWORD,
 
   // Cloudinary
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME || "",

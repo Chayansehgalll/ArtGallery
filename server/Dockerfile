@@ -1,35 +1,35 @@
 FROM node:20-alpine
 
-# Install native building requirements for system utilities
+# Install essential native binary build dependencies
 RUN apk add --no-cache libc6-compat python3 make g++
 
 WORKDIR /app
 
-# Copy dependency manifests
+# Copy package configurations
 COPY package*.json ./
 
-# Install clean dependency lists
+# Install clean dependency listings
 RUN npm install
 
-# Build Prisma bindings
+# Generate internal Prisma client types
 COPY prisma ./prisma/
 RUN npx prisma generate
 
 # Copy codebase assets
 COPY . .
 
-# Compile TypeScript down to the build target folder (dist/)
+# Compile TypeScript down into native ES Modules JavaScript (dist/)
 RUN npm run build
 
-# Strip dev-dependencies out of the production container image
+# Strip devDependencies to ensure an ultra-lean production image
 RUN npm prune --production
 
-# Inform Back4App framework of target internal ports
+# Expose internal port architecture
 EXPOSE 8080
 
-# Inject required orchestration variables
+# Inject fixed deployment runtime variables
 ENV PORT=8080
 ENV NODE_ENV=production
 
-# Safely apply outstanding database migrations, then execute the JS output file
-CMD ["sh", "-c", "npx prisma migrate deploy && npm run start"]
+# Boot via npm directly (npm automatically maps the prestart migrations!)
+CMD ["npm", "run", "start"]
