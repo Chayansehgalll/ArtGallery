@@ -1,35 +1,33 @@
 FROM node:20-alpine
 
-# Install build essentials required for native dependency compilations (like bcrypt)
+# Install native compilation requirements for tools like bcrypt
 RUN apk add --no-cache libc6-compat python3 make g++
 
 WORKDIR /app
 
-# Copy dependency manifests first to leverage Docker caching layers
+# Copy dependency mappings
 COPY package*.json ./
 
-# Install ALL production and development dependencies directly from package.json
-RUN npm ci
+# Install all dependencies (production + development types needed for tsc build)
+RUN npm install
 
-# Copy Prisma files and generate client bindings before copying the main source code
+# Pre-generate Prisma client bindings
 COPY prisma ./prisma/
 RUN npx prisma generate
 
-# Copy the rest of the application files
+# Copy the rest of the backend repository files
 COPY . .
 
-# Compile TypeScript code into your production build (dist/) folder
+# Compile TypeScript to JavaScript (generates the dist/ folder)
 RUN npm run build
 
-# Clear development dependencies to make the container light and fast
+# Prune development typing files to keep the container fast and secure
 RUN npm prune --production
 
-# Expose the correct port matching Back4App load balancer health checks
 EXPOSE 8080
 
-# Environment optimization variables
 ENV PORT=8080
 ENV NODE_ENV=production
 
-# Clean execution form running database migrations safely before launching the service
+# Safely run pending migrations and boot up the Express server
 CMD ["sh", "-c", "npx prisma migrate deploy && npm run start"]
