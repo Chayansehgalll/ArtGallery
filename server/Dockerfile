@@ -8,15 +8,15 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# 4. Install ALL dependencies (including devDependencies like TypeScript)
-RUN npm install --include=dev
+# 4. Install dependencies
+RUN npm install
 
 # 5. Copy the rest of your server code
 COPY . .
 
-# 6. Generate Prisma client and build TypeScript
+# 6. Generate Prisma client and build TypeScript by downloading the correct compiler explicitly
 RUN npx prisma generate
-RUN npx tsc
+RUN npx -p typescript tsc
 
 # 7. Expose the port the app runs on
 EXPOSE 8080
