@@ -48,7 +48,9 @@ export async function getAll(req: Request, res: Response, next: NextFunction) {
 
 export async function getBySlug(req: Request, res: Response, next: NextFunction) {
   try {
-    const painting = await paintingService.getPaintingBySlug(req.params.slug);
+    const painting = await paintingService.getPaintingBySlug(
+      req.params.slug as string
+    );
     sendSuccess(res, painting);
   } catch (err) {
     next(err);
@@ -57,7 +59,9 @@ export async function getBySlug(req: Request, res: Response, next: NextFunction)
 
 export async function getById(req: Request, res: Response, next: NextFunction) {
   try {
-    const painting = await paintingService.getPaintingById(req.params.id);
+    const painting = await paintingService.getPaintingById(
+      req.params.id as string
+    );
     sendSuccess(res, painting);
   } catch (err) {
     next(err);
@@ -77,7 +81,9 @@ export async function getFeatured(req: Request, res: Response, next: NextFunctio
 
 export async function getRelated(req: Request, res: Response, next: NextFunction) {
   try {
-    const paintings = await paintingService.getRelatedPaintings(req.params.id);
+    const paintings = await paintingService.getRelatedPaintings(
+      req.params.id as string
+    );
     sendSuccess(res, paintings);
   } catch (err) {
     next(err);
@@ -176,7 +182,7 @@ export async function create(req: Request, res: Response, next: NextFunction) {
 
 export async function update(req: Request, res: Response, next: NextFunction) {
   try {
-    const id = req.params.id;
+    const id = req.params.id as string;
     const files = req.files as { 
       coverImage?: Express.Multer.File[];
       mainImage?: Express.Multer.File[];
@@ -257,7 +263,9 @@ export async function update(req: Request, res: Response, next: NextFunction) {
 
 export async function remove(req: Request, res: Response, next: NextFunction) {
   try {
-    await paintingService.deletePainting(req.params.id);
+    await paintingService.deletePainting(
+      req.params.id as string
+    );
     sendSuccess(res, null, "Painting deleted");
   } catch (err) {
     next(err);

@@ -14,7 +14,9 @@ export async function getAll(req: Request, res: Response, next: NextFunction) {
 
 export async function getBySlug(req: Request, res: Response, next: NextFunction) {
   try {
-    const category = await categoryService.getCategoryBySlug(req.params.slug);
+    const category = await categoryService.getCategoryBySlug(
+      req.params.slug as string
+    );
     sendSuccess(res, category);
   } catch (err) {
     next(err);
@@ -34,7 +36,10 @@ export async function create(req: Request, res: Response, next: NextFunction) {
 export async function update(req: Request, res: Response, next: NextFunction) {
   try {
     const data = updateCategorySchema.parse(req.body);
-    const category = await categoryService.updateCategory(req.params.id, data);
+    const category = await categoryService.updateCategory(
+      req.params.id as string,
+      data
+    );
     sendSuccess(res, category, "Category updated");
   } catch (err) {
     next(err);
@@ -43,7 +48,9 @@ export async function update(req: Request, res: Response, next: NextFunction) {
 
 export async function remove(req: Request, res: Response, next: NextFunction) {
   try {
-    await categoryService.deleteCategory(req.params.id);
+    await categoryService.deleteCategory(
+      req.params.id as string
+    );
     sendSuccess(res, null, "Category deleted");
   } catch (err) {
     next(err);

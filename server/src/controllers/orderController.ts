@@ -24,7 +24,10 @@ export async function getMyOrders(req: Request, res: Response, next: NextFunctio
 
 export async function getMyOrder(req: Request, res: Response, next: NextFunction) {
   try {
-    const order = await orderService.getOrderById(req.params.id, req.user!.id);
+    const order = await orderService.getOrderById(
+      req.params.id as string,
+      req.user!.id
+    );
     sendSuccess(res, order);
   } catch (err) {
     next(err);
@@ -49,7 +52,10 @@ export async function getAllOrders(req: Request, res: Response, next: NextFuncti
 export async function updateStatus(req: Request, res: Response, next: NextFunction) {
   try {
     const { status } = updateOrderStatusSchema.parse(req.body);
-    const order = await orderService.updateOrderStatus(req.params.id, status);
+    const order = await orderService.updateOrderStatus(
+      req.params.id as string,
+      status
+    );
     sendSuccess(res, order, `Order status updated to ${status}`);
   } catch (err) {
     next(err);
@@ -67,7 +73,9 @@ export async function getDashboard(req: Request, res: Response, next: NextFuncti
 
 export async function getOrderById(req: Request, res: Response, next: NextFunction) {
   try {
-    const order = await orderService.getOrderById(req.params.id);
+    const order = await orderService.getOrderById(
+      req.params.id as string
+    );
     sendSuccess(res, order);
   } catch (err) {
     next(err);
@@ -88,7 +96,10 @@ export async function getPendingPayments(req: Request, res: Response, next: Next
 export async function verifyPayment(req: Request, res: Response, next: NextFunction) {
   try {
     const approved = req.body.approved !== false;
-    const order = await orderService.verifyOrderPayment(req.params.id, approved);
+    const order = await orderService.verifyOrderPayment(
+      req.params.id as string,
+      approved
+    );
     sendSuccess(res, order, approved ? "Payment verified — order confirmed" : "Payment rejected — order cancelled");
   } catch (err) {
     next(err);

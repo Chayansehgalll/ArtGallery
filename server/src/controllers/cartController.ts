@@ -24,7 +24,11 @@ export async function addItem(req: Request, res: Response, next: NextFunction) {
 export async function updateItem(req: Request, res: Response, next: NextFunction) {
   try {
     const { quantity } = req.body;
-    const item = await cartService.updateCartItem(req.user!.id, req.params.id, quantity);
+    const item = await cartService.updateCartItem(
+      req.user!.id,
+      req.params.id as string,
+      quantity
+    );
     sendSuccess(res, item, "Cart updated");
   } catch (err) {
     next(err);
@@ -33,7 +37,10 @@ export async function updateItem(req: Request, res: Response, next: NextFunction
 
 export async function removeItem(req: Request, res: Response, next: NextFunction) {
   try {
-    await cartService.removeFromCart(req.user!.id, req.params.id);
+    await cartService.removeFromCart(
+      req.user!.id,
+      req.params.id as string
+    );
     sendSuccess(res, null, "Item removed from cart");
   } catch (err) {
     next(err);

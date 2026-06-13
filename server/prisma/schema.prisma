@@ -303,3 +303,29 @@ model PageView {
   @@index([createdAt])
   @@map("page_views")
 }
+
+model CartItem {
+  id         String   @id @default(uuid())
+  customerId String   @map("customer_id")
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  paintingId String   @map("painting_id")
+  painting   Painting @relation(fields: [paintingId], references: [id])
+  quantity   Int      @default(1)
+  frame      String?  @default("Black Oak")
+  createdAt  DateTime @default(now())
+
+  @@unique([customerId, paintingId, frame])
+  @@map("cart_items")
+}
+
+model WishlistItem {
+  id         String   @id @default(uuid())
+  customerId String   @map("customer_id")
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  paintingId String   @map("painting_id")
+  painting   Painting @relation(fields: [paintingId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([customerId, paintingId])
+  @@map("wishlist_items")
+}

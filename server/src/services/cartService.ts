@@ -5,7 +5,7 @@ export async function getCart(customerId: string) {
   return prisma.cartItem.findMany({
     where: { customerId },
     include: { painting: true },
-    orderBy: { createdAt: "asc" },
+    orderBy: { id: "asc" },
   });
 }
 
@@ -15,7 +15,10 @@ export async function addToCart(
   quantity: number = 1,
   frame?: string
 ) {
-  const painting = await prisma.painting.findUnique({ where: { id: paintingId } });
+  const painting = await prisma.painting.findUnique({
+    where: { id: paintingId },
+  });
+
   if (!painting) throw new NotFoundError("Painting");
 
   const existing = await prisma.cartItem.findUnique({
@@ -31,7 +34,9 @@ export async function addToCart(
   if (existing) {
     return prisma.cartItem.update({
       where: { id: existing.id },
-      data: { quantity: existing.quantity + quantity },
+      data: {
+        quantity: existing.quantity + quantity,
+      },
       include: { painting: true },
     });
   }
@@ -43,7 +48,9 @@ export async function addToCart(
       quantity,
       frame: frame || "Black Oak",
     },
-    include: { painting: true },
+    include: {
+      painting: true,
+    },
   });
 }
 
@@ -53,12 +60,18 @@ export async function updateCartItem(
   quantity: number
 ) {
   const item = await prisma.cartItem.findFirst({
-    where: { id: itemId, customerId },
+    where: {
+      id: itemId,
+      customerId,
+    },
   });
+
   if (!item) throw new NotFoundError("Cart item");
 
   if (quantity <= 0) {
-    return prisma.cartItem.delete({ where: { id: itemId } });
+    return prisma.cartItem.delete({
+      where: { id: itemId },
+    });
   }
 
   return prisma.cartItem.update({
@@ -68,15 +81,26 @@ export async function updateCartItem(
   });
 }
 
-export async function removeFromCart(customerId: string, itemId: string) {
+export async function removeFromCart(
+  customerId: string,
+  itemId: string
+) {
   const item = await prisma.cartItem.findFirst({
-    where: { id: itemId, customerId },
+    where: {
+      id: itemId,
+      customerId,
+    },
   });
+
   if (!item) throw new NotFoundError("Cart item");
 
-  return prisma.cartItem.delete({ where: { id: itemId } });
+  return prisma.cartItem.delete({
+    where: { id: itemId },
+  });
 }
 
 export async function clearCart(customerId: string) {
-  return prisma.cartItem.deleteMany({ where: { customerId } });
+  return prisma.cartItem.deleteMany({
+    where: { customerId },
+  });
 }
