@@ -4,19 +4,22 @@ FROM node:18-alpine
 # 2. Set the working directory inside the container
 WORKDIR /app
 
-# 3. Copy package configuration files
+# 3. Copy package configuration files from both the root and server folders
 COPY package*.json ./
-COPY prisma ./prisma/
+COPY server/package*.json ./server/
+COPY server/prisma ./server/prisma/
 
-# 4. Install dependencies
+# 4. Install all global and local dependencies
 RUN npm install
+RUN cd server && npm install
 
-# 5. Copy the rest of your server code
+# 5. Copy the rest of the application files
 COPY . .
 
-# 6. Generate Prisma client and build TypeScript by downloading the correct compiler explicitly
+# 6. Build the server environment
+WORKDIR /app/server
 RUN npx prisma generate
-RUN npx -p typescript tsc
+RUN npx -p typescript tsc --skipLibCheck
 
 # 7. Expose the port the app runs on
 EXPOSE 8080
