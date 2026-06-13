@@ -1,47 +1,35 @@
-FROM node:18-alpine
+FROM node:20-alpine
+
+# Install build essentials required for native dependency compilations (like bcrypt)
+RUN apk add --no-cache libc6-compat python3 make g++
 
 WORKDIR /app
 
+# Copy dependency manifests first to leverage Docker caching layers
 COPY package*.json ./
+
+# Install ALL production and development dependencies directly from package.json
+RUN npm ci
+
+# Copy Prisma files and generate client bindings before copying the main source code
 COPY prisma ./prisma/
-
-RUN npm install
-
-COPY . .
-
-RUN npm install \
-cloudinary \
-express-rate-limit \
-express \
-cors \
-helmet \
-morgan \
-compression \
-cookie-parser \
-jsonwebtoken \
-bcryptjs \
-zod \
-multer \
-nodemailer \
-@prisma/client
-
-RUN npm install -D \
-typescript \
-@types/node \
-@types/express \
-@types/cors \
-@types/compression \
-@types/cookie-parser \
-@types/jsonwebtoken \
-@types/bcryptjs \
-@types/morgan \
-@types/multer \
-@types/nodemailer
-
 RUN npx prisma generate
 
-RUN npx tsc
+# Copy the rest of the application files
+COPY . .
 
+# Compile TypeScript code into your production build (dist/) folder
+RUN npm run build
+
+# Clear development dependencies to make the container light and fast
+RUN npm prune --production
+
+# Expose the correct port matching Back4App load balancer health checks
 EXPOSE 8080
 
-CMD npx prisma migrate deploy && npm run start
+# Environment optimization variables
+ENV PORT=8080
+ENV NODE_ENV=production
+
+# Clean execution form running database migrations safely before launching the service
+CMD ["sh", "-c", "npx prisma migrate deploy && npm run start"]
