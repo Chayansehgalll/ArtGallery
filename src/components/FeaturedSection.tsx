@@ -150,7 +150,7 @@ export default function FeaturedSection() {
                 </h3>
                 <div className="flex items-center justify-between pt-2">
                   <span className="text-white/60 text-sm">
-                    ${artwork.price.toLocaleString()}
+                    ₹{artwork.price.toLocaleString()}
                   </span>
                   <span className="text-white/20 text-[10px] tracking-wider">
                     {artwork.dimensions}

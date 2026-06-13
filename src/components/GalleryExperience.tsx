@@ -685,7 +685,7 @@ function InfoPanel({ art, onClose, onProduct }: { art: Artwork; onClose: () => v
         </div>
         <div><p className="text-black/35 text-[10px] tracking-[0.2em] uppercase mb-0.5">{art.artist}</p>
           <h3 className="text-black text-xl font-light">{art.title}</h3></div>
-        <p className="text-black text-2xl font-light">${art.price.toLocaleString()}</p>
+        <p className="text-black text-2xl font-light">₹{art.price.toLocaleString()}</p>
         <p className="text-black/45 text-xs leading-relaxed">{art.description}</p>
         <div className="grid grid-cols-2 gap-2 text-[10px] text-black/45 tracking-wider uppercase">
           {[["Size", art.dimensions], ["Medium", art.medium], ["Year", String(art.year)], ["Edition", `${art.edition}/${art.editionTotal}`]].map(([l, v]) => (
