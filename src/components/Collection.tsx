@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { styles, sizes, rooms } from "../data/artworks";
-import { usePaintings, coverOf } from "../services/paintings";
+import { coverOf } from "../services/paintings";
 import { resolveDimensions } from "../utils/frame";
 import { useStore } from "../store/useStore";
 import {
@@ -22,6 +22,8 @@ export default function Collection() {
     setSelectedArtwork,
     toggleWishlist,
     wishlist,
+    paintings: artworks,
+    loadPaintings,
     filterCategory,
     setFilterCategory,
     filterStyle,
@@ -37,8 +39,6 @@ export default function Collection() {
     clearFilters,
   } = useStore();
 
-  const { paintings: artworks, refresh } = usePaintings();
-
   const [showFilters, setShowFilters] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [spotlightId, setSpotlightId] = useState<string>("");
@@ -46,33 +46,41 @@ export default function Collection() {
   const gridRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
 
-  // Revalidate and fetch fresh data from the backend when the Collection page loads
+  // Bind interface view layer to global live database state
   useEffect(() => {
-    refresh();
-  }, []);
+    loadPaintings();
+  }, [loadPaintings]);
 
-  // Dynamically extract categories present in the database response to prevent sync failures
+  // Unified parser to normalize backend data schema patterns
+  const getArtworkCategoryName = (art: any): string => {
+    if (!art.category) return "";
+    return typeof art.category === "object" ? art.category.name : String(art.category);
+  };
+
+  // Extract dynamic runtime relational categories from your live Postgres rows
   const displayCategories = useMemo(() => {
     const categoriesSet = new Set<string>();
     artworks.forEach((art) => {
-      const catName = typeof art.category === "object" ? art.category?.name : art.category;
+      const catName = getArtworkCategoryName(art);
       if (catName) categoriesSet.add(catName);
     });
     return ["All", ...Array.from(categoriesSet)];
   }, [artworks]);
 
-  // Core Reactive Filtering Logic
+  // Standardized dynamic database category lookup routines
   const filteredArtworks = useMemo(() => {
     return artworks.filter((art) => {
       if (filterCategory !== "All") {
-        const catSlug = typeof art.category === "object" ? art.category?.name : art.category;
-        if (catSlug?.toLowerCase() !== filterCategory.toLowerCase()) return false;
+        const catName = getArtworkCategoryName(art);
+        if (catName.toLowerCase() !== filterCategory.toLowerCase()) return false;
       }
       
       if (filterStyle !== "All" && art.style !== filterStyle) return false;
       if (filterSize !== "All" && art.size !== filterSize) return false;
       if (filterRoom !== "All" && !art.roomType?.includes(filterRoom)) return false;
-      if (art.price < filterPriceRange[0] || art.price > filterPriceRange[1]) return false;
+      
+      const priceNum = Number(art.price);
+      if (priceNum < filterPriceRange[0] || priceNum > filterPriceRange[1]) return false;
       
       if (
         searchQuery &&
@@ -278,7 +286,6 @@ export default function Collection() {
 
         {/* Categories Bar & Search Input Control Row */}
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 mb-12 pb-8 border-b border-white/5">
-          {/* Left Side Tab Controls */}
           <div className="flex flex-wrap items-center gap-2 overflow-x-auto no-scrollbar">
             {displayCategories.map((cat) => (
               <button
@@ -295,7 +302,6 @@ export default function Collection() {
             ))}
           </div>
 
-          {/* Right Side Search Bar Fields */}
           <div className="flex items-center gap-4 justify-between md:justify-end">
             <div className="relative w-full sm:w-64">
               <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
@@ -328,7 +334,6 @@ export default function Collection() {
               className="overflow-hidden mb-12"
             >
               <div className="pb-8 border-b border-white/5 space-y-6">
-                {/* Style Group Filter */}
                 <div>
                   <p className="text-white/30 text-[10px] tracking-[0.2em] uppercase mb-3">Style</p>
                   <div className="flex flex-wrap gap-2">
@@ -342,7 +347,6 @@ export default function Collection() {
                     ))}
                   </div>
                 </div>
-                {/* Size Group Filter */}
                 <div>
                   <p className="text-white/30 text-[10px] tracking-[0.2em] uppercase mb-3">Size Options</p>
                   <div className="flex flex-wrap gap-2">
@@ -356,7 +360,6 @@ export default function Collection() {
                     ))}
                   </div>
                 </div>
-                {/* Space Room Group Filter */}
                 <div>
                   <p className="text-white/30 text-[10px] tracking-[0.2em] uppercase mb-3 font-light">Target Room</p>
                   <div className="flex flex-wrap gap-2">
@@ -370,7 +373,6 @@ export default function Collection() {
                     ))}
                   </div>
                 </div>
-                {/* Price Range Constraints Wrapper */}
                 <div>
                   <p className="text-white/30 text-[10px] tracking-[0.2em] uppercase mb-3">
                     Max Price Limit: ₹{filterPriceRange[1].toLocaleString("en-IN")}
@@ -387,7 +389,7 @@ export default function Collection() {
                 </div>
                 <button
                   onClick={clearFilters}
-                  className="text-white/30 hover:text-white text-[10px] tracking-[0.2em] uppercase flex items-center gap-2 transition-colors pt-2"
+                  className="button text-white/30 hover:text-white text-[10px] tracking-[0.2em] uppercase flex items-center gap-2 transition-colors pt-2"
                 >
                   <X size={12} />
                   Reset Applied Filters
@@ -397,16 +399,12 @@ export default function Collection() {
           )}
         </AnimatePresence>
 
-        {/* Real-time Counter Metrics */}
         <div className="mb-8 text-white/30 text-[10px] tracking-[0.2em] uppercase">
           Showing {filteredArtworks.length} artwork{filteredArtworks.length !== 1 ? "s" : ""}
         </div>
 
-        {/* Stable Primary Column Collection Grid */}
-        <div
-          ref={gridRef}
-          className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
-        >
+        {/* Collection Grid */}
+        <div ref={gridRef} className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           <AnimatePresence mode="popLayout">
             {filteredArtworks.map((artwork, index) => (
               <motion.div
@@ -442,7 +440,6 @@ export default function Collection() {
                   />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-500" />
                   
-                  {/* Overlay Interaction Elements */}
                   <AnimatePresence>
                     {hoveredId === artwork.id && (
                       <motion.div
@@ -513,7 +510,6 @@ export default function Collection() {
           </AnimatePresence>
         </div>
 
-        {/* Empty Collection View Fallback */}
         {filteredArtworks.length === 0 && (
           <div className="text-center py-24">
             <p className="text-white/30 text-sm tracking-wider uppercase">
@@ -528,7 +524,7 @@ export default function Collection() {
           </div>
         )}
 
-        {/* Overlay Compare Floating Tray bar */}
+        {/* Compare Floating Tray */}
         <AnimatePresence>
           {compareIds.length > 0 && (
             <motion.div

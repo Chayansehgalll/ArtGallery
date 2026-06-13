@@ -57,7 +57,7 @@ export const useStore = create<StoreState>((set, get) => ({
   cart: [],
   wishlist: [],
   recentlyViewed: [],
-  paintings: sampleArtworks,
+  paintings: sampleArtworks, // Defaults to sample data on initiation
   paintingsLoaded: false,
   currentView: "home",
   selectedArtwork: null,
@@ -68,18 +68,22 @@ export const useStore = create<StoreState>((set, get) => ({
   filterStyle: "All",
   filterSize: "All",
   filterRoom: "All",
-  filterPriceRange: [0, 10000],
+  filterPriceRange: [0, 500000], // Extracted to encompass custom entry maximums
   searchQuery: "",
   saleFilter: "All",
   avatarGender: null,
 
   loadPaintings: async () => {
-    const fetched = await fetchPaintings();
-    if (fetched && fetched.length > 0) {
-      set({ paintings: fetched, paintingsLoaded: true });
-    } else {
-      // Backend offline or empty — keep the built-in samples
-      set({ paintingsLoaded: true });
+    try {
+      const fetched = await fetchPaintings();
+      if (fetched && fetched.length > 0) {
+        set({ paintings: fetched, paintingsLoaded: true, isLoading: false });
+      } else {
+        set({ paintings: sampleArtworks, paintingsLoaded: true, isLoading: false });
+      }
+    } catch (error) {
+      console.error("Store cluster dropped network syncing package:", error);
+      set({ paintings: sampleArtworks, paintingsLoaded: true, isLoading: false });
     }
   },
 
@@ -154,14 +158,14 @@ export const useStore = create<StoreState>((set, get) => ({
       filterStyle: "All",
       filterSize: "All",
       filterRoom: "All",
-      filterPriceRange: [0, 10000],
+      filterPriceRange: [0, 500000],
       searchQuery: "",
       saleFilter: "All",
     }),
 
   getCartTotal: () => {
     return get().cart.reduce(
-      (total, item) => total + item.artwork.price * item.quantity,
+      (total, item) => total + Number(item.artwork.price) * item.quantity,
       0
     );
   },
