@@ -18,7 +18,7 @@ export const env = {
 
   // Database
   databaseUrl: process.env.DATABASE_URL!,
-
+  directUrl: process.env.DIRECT_URL || process.env.DATABASE_URL!,
   // JWT
   jwtSecret: process.env.JWT_SECRET || "fallback-secret-change-me",
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || "fallback-refresh-secret",
