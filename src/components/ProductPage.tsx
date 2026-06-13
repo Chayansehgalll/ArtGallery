@@ -4,7 +4,12 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
 import * as THREE from "three";
 import { useStore } from "../store/useStore";
-import { usePaintings, selectRelated, coverOf, mainOf } from "../services/paintings";
+import {
+  usePaintings,
+  selectRelated,
+  coverOf,
+  mainOf,
+} from "../services/paintings";
 import { resolveDimensions } from "../utils/frame";
 import {
   ArrowLeft,
@@ -109,7 +114,11 @@ export default function ProductPage() {
 
   const { paintings } = usePaintings();
   const artwork = selectedArtwork || paintings[0];
-  const dims = resolveDimensions(artwork?.width, artwork?.height, artwork?.dimensions);
+  const dims = resolveDimensions(
+    artwork?.width,
+    artwork?.height,
+    artwork?.dimensions,
+  );
 
   // Full-resolution main image first, then any extra gallery images (deduped).
   const viewImages = (() => {
@@ -131,7 +140,7 @@ export default function ProductPage() {
       gsap.fromTo(
         pageRef.current.children,
         { opacity: 0, y: 30 },
-        { opacity: 1, y: 0, duration: 0.8, stagger: 0.1, ease: "power3.out" }
+        { opacity: 1, y: 0, duration: 0.8, stagger: 0.1, ease: "power3.out" },
       );
     }
   }, []);
@@ -265,11 +274,7 @@ export default function ProductPage() {
                       scale={10}
                     />
                     <ambientLight intensity={0.5} />
-                    <spotLight
-                      position={[5, 5, 5]}
-                      intensity={1}
-                      castShadow
-                    />
+                    <spotLight position={[5, 5, 5]} intensity={1} castShadow />
                   </Suspense>
                 </Canvas>
               </div>
@@ -291,11 +296,11 @@ export default function ProductPage() {
               </h1>
               <div className="flex items-center gap-4">
                 <span className="text-white text-2xl font-light">
-                  ${artwork.price.toLocaleString()}
+                  ₹{artwork.price.toLocaleString()}
                 </span>
                 {artwork.originalPrice && (
                   <span className="text-white/30 line-through text-lg">
-                    ${artwork.originalPrice.toLocaleString()}
+                    ₹{artwork.originalPrice.toLocaleString()}
                   </span>
                 )}
               </div>
@@ -497,7 +502,11 @@ export default function ProductPage() {
                     className="bg-white/5 overflow-hidden mb-3"
                     style={{
                       aspectRatio: (() => {
-                        const d = resolveDimensions(art.width, art.height, art.dimensions);
+                        const d = resolveDimensions(
+                          art.width,
+                          art.height,
+                          art.dimensions,
+                        );
                         return `${d.width} / ${d.height}`;
                       })(),
                     }}
@@ -513,7 +522,7 @@ export default function ProductPage() {
                   </p>
                   <p className="text-white text-sm font-light">{art.title}</p>
                   <p className="text-white/60 text-xs mt-1">
-                    ${art.price.toLocaleString()}
+                    ₹{art.price.toLocaleString()}
                   </p>
                 </button>
               ))}

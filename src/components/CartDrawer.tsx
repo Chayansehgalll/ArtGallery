@@ -147,7 +147,7 @@ export default function CartDrawer() {
                       </button>
                     </div>
                     <p className="text-white text-sm">
-                      ${(item.artwork.price * item.quantity).toLocaleString()}
+                      ₹{(item.artwork.price * item.quantity).toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -168,7 +168,7 @@ export default function CartDrawer() {
                 Subtotal
               </span>
               <span className="text-white text-lg font-light">
-                ${getCartTotal().toLocaleString()}
+                ₹{getCartTotal().toLocaleString()}
               </span>
             </div>
             <button

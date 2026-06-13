@@ -416,7 +416,7 @@ export default function CheckoutPage() {
                             <Plus size={9} />
                           </button>
                         </div>
-                        <p className="text-white text-xs">${(item.artwork.price * item.quantity).toLocaleString()}</p>
+                        <p className="text-white text-xs">₹{(item.artwork.price * item.quantity).toLocaleString()}</p>
                       </div>
                     </div>
                     <button onClick={() => removeFromCart(item.artwork.id)}
@@ -447,7 +447,7 @@ export default function CheckoutPage() {
               <div className="space-y-3 py-5 border-t border-white/5">
                 <div className="flex justify-between text-xs">
                   <span className="text-white/40 tracking-wider uppercase">Subtotal</span>
-                  <span className="text-white">${subtotal.toLocaleString()}</span>
+                  <span className="text-white">₹{subtotal.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-white/40 tracking-wider uppercase flex items-center gap-2">
@@ -457,7 +457,7 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between items-center pt-3 border-t border-white/5">
                   <span className="text-white/60 text-xs tracking-[0.2em] uppercase">Total</span>
-                  <span className="text-white text-2xl font-light">${total.toLocaleString()}</span>
+                  <span className="text-white text-2xl font-light">₹{total.toLocaleString()}</span>
                 </div>
               </div>
 
