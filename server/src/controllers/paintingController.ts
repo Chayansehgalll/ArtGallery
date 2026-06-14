@@ -101,6 +101,7 @@ export async function getGallery(req: Request, res: Response, next: NextFunction
 
 export async function create(req: Request, res: Response, next: NextFunction) {
   try {
+    // 1. Safely type cast files with comprehensive fallback
     const files = req.files as { 
       coverImage?: Express.Multer.File[];
       mainImage?: Express.Multer.File[];
@@ -111,26 +112,28 @@ export async function create(req: Request, res: Response, next: NextFunction) {
     let mainImageUrl: string | undefined = undefined;
     const additionalImageUrls: string[] = [];
 
-    if (files?.coverImage?.[0]?.buffer) {
+    // 2. Strict buffer evaluation before uploading to Cloudinary
+    if (files && files.coverImage && files.coverImage[0] && files.coverImage[0].buffer) {
       coverImageUrl = await uploadStream(
         files.coverImage[0].buffer,
         "paintings/covers"
       );
     }
 
-    if (files?.mainImage?.[0]?.buffer) {
+    if (files && files.mainImage && files.mainImage[0] && files.mainImage[0].buffer) {
       mainImageUrl = await uploadStream(
         files.mainImage[0].buffer,
         "paintings/mains"
       );
     }
 
-    if (files?.images?.length) {
+    // 3. Fully secure iteration for optional gallery images
+    if (files && Array.isArray(files.images)) {
       for (const file of files.images) {
-        if (!file?.buffer) continue;
-
-        const url = await uploadStream(file.buffer, "paintings/gallery");
-        additionalImageUrls.push(url);
+        if (file && file.buffer) {
+          const url = await uploadStream(file.buffer, "paintings/gallery");
+          additionalImageUrls.push(url);
+        }
       }
     }
 
@@ -160,7 +163,8 @@ export async function create(req: Request, res: Response, next: NextFunction) {
       return res.status(400).json({ success: false, message: "Validation parameters mismatch." });
     }
 
-    let mainImage = mainImageUrl || parsedData.mainImage || parsedData.images?.[0] || undefined;
+    // Combine uploaded cloud URLs or fallback properties safely
+    let mainImage = mainImageUrl || parsedData.mainImage || (parsedData.images && parsedData.images[0]) || undefined;
     let coverImage = coverImageUrl || parsedData.coverImage || mainImage || undefined;
     
     if (mainImage && !coverImage) {
@@ -186,7 +190,7 @@ export async function create(req: Request, res: Response, next: NextFunction) {
 
     sendSuccess(res, painting, "Painting profile recorded successfully", 201);
   } catch (err) {
-    next(err);
+    next(err); // This will pass any remaining issues cleanly to errorHandler middleware instead of hard-crashing
   }
 }
 
