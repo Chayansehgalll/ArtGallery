@@ -14,13 +14,12 @@ function parseFormArray(value: unknown): string[] {
       try {
         const parsed = JSON.parse(trimmed);
         if (Array.isArray(parsed)) {
-          return parsed.map(String); // Successfully parsed array, return immediately!
+          return parsed.map(String);
         }
       } catch (e) {
-        // Fallback if JSON parse fails
+        // Fallback
       }
     }
-    // Only split by comma if it wasn't a valid JSON array string format
     return trimmed.split(",").map((s) => s.trim()).filter(Boolean);
   }
   
@@ -112,14 +111,24 @@ export async function create(req: Request, res: Response, next: NextFunction) {
     let mainImageUrl: string | undefined = undefined;
     const additionalImageUrls: string[] = [];
 
-    if (files?.coverImage?.[0]) {
-      coverImageUrl = await uploadStream(files.coverImage[0].buffer, "paintings/covers");
+    if (files?.coverImage?.[0]?.buffer) {
+      coverImageUrl = await uploadStream(
+        files.coverImage[0].buffer,
+        "paintings/covers"
+      );
     }
-    if (files?.mainImage?.[0]) {
-      mainImageUrl = await uploadStream(files.mainImage[0].buffer, "paintings/mains");
+
+    if (files?.mainImage?.[0]?.buffer) {
+      mainImageUrl = await uploadStream(
+        files.mainImage[0].buffer,
+        "paintings/mains"
+      );
     }
-    if (files?.images && files.images.length > 0) {
+
+    if (files?.images?.length) {
       for (const file of files.images) {
+        if (!file?.buffer) continue;
+
         const url = await uploadStream(file.buffer, "paintings/gallery");
         additionalImageUrls.push(url);
       }
@@ -127,15 +136,11 @@ export async function create(req: Request, res: Response, next: NextFunction) {
 
     const bodyData = { ...req.body };
 
-    // FIX: Parse all expected structural array parameters correctly
     if (bodyData.frameOptions !== undefined) {
       bodyData.frameOptions = parseFormArray(bodyData.frameOptions);
     }
     if (bodyData.tags !== undefined) {
       bodyData.tags = parseFormArray(bodyData.tags);
-    }
-    if (bodyData.images !== undefined) {
-      bodyData.images = parseFormArray(bodyData.images);
     }
 
     for (const key in bodyData) {
@@ -148,7 +153,7 @@ export async function create(req: Request, res: Response, next: NextFunction) {
     try {
       parsedData = createPaintingSchema.parse(bodyData);
     } catch (zodErr: any) {
-      if (zodErr.errors && Array.isArray(zodErr.errors)) {
+      if (zodErr.errors) {
         const msg = zodErr.errors.map((e: any) => `${e.path.join(".")}: ${e.message}`).join(", ");
         return res.status(400).json({ success: false, message: `Validation Error: ${msg}` });
       }
