@@ -14,12 +14,13 @@ function parseFormArray(value: unknown): string[] {
       try {
         const parsed = JSON.parse(trimmed);
         if (Array.isArray(parsed)) {
-          return parsed.map(String);
+          return parsed.map(String); // Successfully parsed array, return immediately!
         }
       } catch (e) {
-        // Fallback
+        // Fallback if JSON parse fails
       }
     }
+    // Only split by comma if it wasn't a valid JSON array string format
     return trimmed.split(",").map((s) => s.trim()).filter(Boolean);
   }
   
@@ -126,11 +127,15 @@ export async function create(req: Request, res: Response, next: NextFunction) {
 
     const bodyData = { ...req.body };
 
+    // FIX: Parse all expected structural array parameters correctly
     if (bodyData.frameOptions !== undefined) {
       bodyData.frameOptions = parseFormArray(bodyData.frameOptions);
     }
     if (bodyData.tags !== undefined) {
       bodyData.tags = parseFormArray(bodyData.tags);
+    }
+    if (bodyData.images !== undefined) {
+      bodyData.images = parseFormArray(bodyData.images);
     }
 
     for (const key in bodyData) {
@@ -143,7 +148,7 @@ export async function create(req: Request, res: Response, next: NextFunction) {
     try {
       parsedData = createPaintingSchema.parse(bodyData);
     } catch (zodErr: any) {
-      if (zodErr.errors) {
+      if (zodErr.errors && Array.isArray(zodErr.errors)) {
         const msg = zodErr.errors.map((e: any) => `${e.path.join(".")}: ${e.message}`).join(", ");
         return res.status(400).json({ success: false, message: `Validation Error: ${msg}` });
       }
@@ -224,7 +229,6 @@ export async function update(req: Request, res: Response, next: NextFunction) {
       }
     }
 
-    // CRITICAL FIX: Explicitly strip layout parameters, relational objects, and metadata timestamps
     delete bodyData.id;
     delete bodyData.category;
     delete bodyData.slug;
