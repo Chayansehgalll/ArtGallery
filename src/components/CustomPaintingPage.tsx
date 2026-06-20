@@ -17,6 +17,7 @@ interface FormErrors {
   images?: string;
   frameType?: string;
   estimatedSize?: string;
+  image?: File;
 }
 
 export default function CustomPaintingPage() {
@@ -151,32 +152,51 @@ export default function CustomPaintingPage() {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
-  // Submit Logic Function Handler
+  
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
+  e.preventDefault();
 
-    setIsSubmitting(true);
+  if (!validateForm()) return;
 
-    // Mock API Call processing
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+  setIsSubmitting(true);
 
-    /* Future Backend Integration payload mapping:
-       const payload = {
-         name: formValues.name,
-         phone: formValues.phone,
-         frameType: formValues.frameType,
-         estimatedSize: formValues.estimatedSize,
-         notes: formValues.notes,
-         images: images // array of File items to append into FormData
-       };
-    */
+  const formData = new FormData();
 
+  formData.append("name", formValues.name);
+  formData.append("phone", formValues.phone);
+  formData.append("frameType", formValues.frameType);
+  formData.append("estimatedSize", formValues.estimatedSize);
+  formData.append("notes", formValues.notes);
+
+  images.forEach((image) => {
+    formData.append("attachment", image);
+  });
+
+  try {
+    const response = await fetch(
+      "https://formsubmit.co/ajax/ankurbhardwaj869@gmail.com",
+      {
+        method: "POST",
+        body: formData,
+        headers: {
+          Accept: "application/json",
+        },
+      }
+    );
+
+    const result = await response.json();
+
+    console.log(result);
+
+    if (response.ok) {
+      setShowSuccessModal(true);
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
     setIsSubmitting(false);
-    setShowSuccessModal(true);
-  };
+  }
+};
 
   const resetForm = () => {
     setFormValues({ name: "", phone: "", frameType: "", estimatedSize: "", notes: "" });
@@ -249,7 +269,7 @@ export default function CustomPaintingPage() {
           className="bg-[#0a0a0a] border border-white/5 p-8 md:p-12 shadow-2xl relative rounded-none backdrop-blur-xl"
         >
           <h2 className="text-xl uppercase tracking-[0.2em] font-light mb-8 text-center border-b border-white/5 pb-6">
-            Commission Form
+            Painting Request Form
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-8" noValidate>
