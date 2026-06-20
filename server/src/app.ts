@@ -20,6 +20,7 @@ import wishlistRoutes from "./routes/wishlistRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
+import customRequestRoutes from "./routes/customRequestRoutes.js";
 
 const app = express();
 
@@ -27,8 +28,8 @@ const app = express();
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(
   cors({
-    origin: env.nodeEnv === "development" ? "*" : env.frontendUrl,
-    credentials: env.nodeEnv !== "development",
+    origin: ["http://localhost:5173", "http://localhost:5174", "http://localhost:3000", env.frontendUrl],
+    credentials: true,
   })
 );
 
@@ -60,6 +61,7 @@ app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/custom-request", customRequestRoutes);
 
 // 404
 app.use((_req, res) => {

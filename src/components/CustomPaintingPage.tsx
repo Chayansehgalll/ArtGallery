@@ -154,49 +154,53 @@ export default function CustomPaintingPage() {
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!validateForm()) return;
+    if (!validateForm()) return;
 
-  setIsSubmitting(true);
+    setIsSubmitting(true);
 
-  const formData = new FormData();
+    const formData = new FormData();
+    formData.append("name", formValues.name);
+    formData.append("phone", formValues.phone);
+    formData.append("frameType", formValues.frameType);
+    formData.append("estimatedSize", formValues.estimatedSize);
+    formData.append("notes", formValues.notes);
 
-  formData.append("name", formValues.name);
-  formData.append("phone", formValues.phone);
-  formData.append("frameType", formValues.frameType);
-  formData.append("estimatedSize", formValues.estimatedSize);
-  formData.append("notes", formValues.notes);
+    // Append images
+    images.forEach((image) => {
+      formData.append("images", image);
+    });
 
-  images.forEach((image) => {
-    formData.append("attachment", image);
-  });
-
-  try {
-    const response = await fetch(
-      "https://formsubmit.co/ajax/ankurbhardwaj869@gmail.com",
-      {
-        method: "POST",
+    try {
+      const response = await fetch('http://localhost:8080/api/custom-request', {
+        method: 'POST',
         body: formData,
-        headers: {
-          Accept: "application/json",
-        },
+      });
+
+      const result = await response.json();
+
+      console.log("Response:", result); // Debug log
+
+      if (response.ok && result.success) {
+        // Clear form first
+        setFormValues({ name: "", phone: "", frameType: "", estimatedSize: "", notes: "" });
+        setImages([]);
+        setImagePreviews([]);
+        setErrors({});
+        
+        // Show success modal
+        setShowSuccessModal(true);
+      } else {
+        throw new Error(result.message || 'Submission failed');
       }
-    );
-
-    const result = await response.json();
-
-    console.log(result);
-
-    if (response.ok) {
-      setShowSuccessModal(true);
+    } catch (error) {
+      console.error('Submission error:', error);
+      alert('Failed to submit your request. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
-  } catch (error) {
-    console.error(error);
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
   const resetForm = () => {
     setFormValues({ name: "", phone: "", frameType: "", estimatedSize: "", notes: "" });
