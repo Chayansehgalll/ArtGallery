@@ -493,7 +493,7 @@ export default function CustomPaintingPage() {
               <div className="space-y-2">
                 <h3 className="text-lg uppercase tracking-[0.2em] font-light text-white">Thank You!</h3>
                 <p className="text-xs text-white/60 font-light leading-relaxed tracking-wide">
-                  Your custom painting request has been prepared successfully. Submission functionality will be connected soon.
+                  Your custom painting request has been sent successfully. Our team will review your submission and contact you shortly with further details regarding pricing, timeline, and next steps.
                 </p>
               </div>
 
