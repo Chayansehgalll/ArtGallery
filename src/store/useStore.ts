@@ -15,7 +15,7 @@ interface StoreState {
   recentlyViewed: Artwork[];
   paintings: Artwork[];
   paintingsLoaded: boolean;
-  currentView: "home" | "collection" | "product" | "artist" | "gallery" | "ar" | "checkout";
+  currentView: "home" | "collection" | "view" | "product" | "artist" | "gallery" | "ar" | "checkout" | "wishlist" | "custom-painting";
   selectedArtwork: Artwork | null;
   isCartOpen: boolean;
   isMenuOpen: boolean;

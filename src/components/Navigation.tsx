@@ -26,6 +26,7 @@ export default function Navigation() {
     { name: "Home", view: "home" as const },
     { name: "Collection", view: "collection" as const },
     { name: "3D Gallery", view: "gallery" as const },
+    { name: "Custom Painting", view: "custom-painting" as const },
     { name: "The Artist", view: "artist" as const },
   ];
 

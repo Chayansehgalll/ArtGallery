@@ -7,9 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ═══════════════════════════════════════════════════
-// ADMIN (single admin account)
-// ═══════════════════════════════════════════════════
 model Admin {
   id        String   @id @default(uuid())
   email     String   @unique
@@ -21,96 +18,79 @@ model Admin {
   @@map("admins")
 }
 
-// ═══════════════════════════════════════════════════
-// CUSTOMER
-// ═══════════════════════════════════════════════════
 model Customer {
-  id               String    @id @default(uuid())
-  email            String    @unique
+  id               String         @id @default(uuid())
+  email            String         @unique
   password         String?
   name             String?
   phone            String?
   address          String?
   city             String?
   state            String?
-  zipCode          String?   @map("zip_code")
-  country          String?   @default("IN")
+  zipCode          String?        @map("zip_code")
+  country          String?        @default("IN")
   avatar           String?
-  isGuest          Boolean   @default(false) @map("is_guest")
-  resetToken       String?   @map("reset_token")
-  resetTokenExpiry DateTime? @map("reset_token_expiry")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
-
-  orders         Order[]
-  cartItems      CartItem[]
-  wishlistItems  WishlistItem[]
-  reviews        Review[]
+  isGuest          Boolean        @default(false) @map("is_guest")
+  resetToken       String?        @map("reset_token")
+  resetTokenExpiry DateTime?      @map("reset_token_expiry")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  cartItems        CartItem[]
+  orders           Order[]
+  reviews          Review[]
+  wishlistItems    WishlistItem[]
 
   @@map("customers")
 }
 
-// ═══════════════════════════════════════════════════
-// CATEGORY
-// ═══════════════════════════════════════════════════
 model Category {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  slug      String   @unique
+  id        String     @id @default(uuid())
+  name      String     @unique
+  slug      String     @unique
   image     String?
-  order     Int      @default(0)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
+  order     Int        @default(0)
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
   paintings Painting[]
 
   @@map("categories")
 }
 
-// ═══════════════════════════════════════════════════
-// PAINTING
-// ═══════════════════════════════════════════════════
 model Painting {
-  id              String       @id @default(uuid())
-  title           String
-  slug            String       @unique
-  description     String
-  story           String?
-  price           Decimal      @db.Decimal(10, 2)
-  originalPrice   Decimal?     @map("original_price") @db.Decimal(10, 2)
-  width           Int          @default(24)
-  height          Int          @default(36)
-  medium          String       @default("Oil on Canvas")
-  style           String?      @default("Contemporary")
-  year            Int          @default(2024)
-  edition         Int          @default(1)
-  editionTotal    Int          @default(1) @map("edition_total")
-  isOriginal      Boolean      @default(true) @map("is_original")
-  isFeatured      Boolean      @default(false) @map("is_featured")
-  isActive        Boolean      @default(true) @map("is_active")
-  inStock         Boolean      @default(true) @map("in_stock")
-  frameOptions    String[]     @default([]) @map("frame_options")
-  tags            String[]     @default([])
-
-  // Media
-  coverImage      String?      @map("cover_image")   // thumbnail used in listings/cards
-  mainImage       String?      @map("main_image")    // full-resolution, details page only
-  images          String[]                            // additional gallery images
-  thumbnail       String?                             // legacy alias for coverImage
-  model3d         String?      @map("model_3d")
-  arAsset         String?      @map("ar_asset")
-
-  // Relations
-  categoryId      String       @map("category_id")
-  category        Category     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-
-  createdAt       DateTime     @default(now()) @map("created_at")
-  updatedAt       DateTime     @updatedAt @map("updated_at")
-
-  cartItems       CartItem[]
-  wishlistItems   WishlistItem[]
-  orderItems      OrderItem[]
-  reviews         Review[]
+  id            String         @id @default(uuid())
+  title         String
+  slug          String         @unique
+  description   String
+  story         String?
+  price         Decimal        @db.Decimal(10, 2)
+  originalPrice Decimal?       @map("original_price") @db.Decimal(10, 2)
+  width         Int            @default(24)
+  height        Int            @default(36)
+  medium        String         @default("Oil on Canvas")
+  style         String?        @default("Contemporary")
+  year          Int            @default(2024)
+  edition       Int            @default(1)
+  editionTotal  Int            @default(1) @map("edition_total")
+  isOriginal    Boolean        @default(true) @map("is_original")
+  isFeatured    Boolean        @default(false) @map("is_featured")
+  isActive      Boolean        @default(true) @map("is_active")
+  inStock       Boolean        @default(true) @map("in_stock")
+  frameOptions  String[]       @default([]) @map("frame_options")
+  tags          String[]       @default([])
+  images        String[]
+  thumbnail     String?
+  model3d       String?        @map("model_3d")
+  arAsset       String?        @map("ar_asset")
+  categoryId    String         @map("category_id")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  coverImage    String?        @map("cover_image")
+  mainImage     String?        @map("main_image")
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  category      Category       @relation(fields: [categoryId], references: [id])
+  reviews       Review[]
+  wishlistItems WishlistItem[]
 
   @@index([categoryId])
   @@index([isFeatured])
@@ -119,150 +99,109 @@ model Painting {
   @@map("paintings")
 }
 
-// ═══════════════════════════════════════════════════
-// ORDER
-// ═══════════════════════════════════════════════════
 model Order {
-  id             String      @id @default(uuid())
-  orderNumber    String      @unique @map("order_number")
-  customerId     String      @map("customer_id")
-  customer       Customer    @relation(fields: [customerId], references: [id])
-  status         OrderStatus @default(PENDING)
-  subtotal       Decimal     @db.Decimal(10, 2)
-  discount       Decimal     @default(0) @db.Decimal(10, 2)
-  tax            Decimal     @default(0) @db.Decimal(10, 2)
-  shipping       Decimal     @default(0) @db.Decimal(10, 2)
-  total          Decimal     @db.Decimal(10, 2)
-  couponCode     String?     @map("coupon_code")
-
-  // Shipping info
-  shippingName    String?  @map("shipping_name")
-  shippingEmail   String?  @map("shipping_email")
-  shippingPhone   String?  @map("shipping_phone")
-  shippingAddress String?  @map("shipping_address")
-  shippingCity    String?  @map("shipping_city")
-  shippingState   String?  @map("shipping_state")
-  shippingZip     String?  @map("shipping_zip")
-  shippingCountry String?  @default("IN") @map("shipping_country")
-
-  // Payment
-  paymentMethod    String?  @map("payment_method")
-  paymentId        String?  @map("payment_id")
-  paymentStatus    String?  @default("VERIFICATION_PENDING") @map("payment_status")
-  paymentReference String?  @map("payment_reference")
-
-  // Notes
-  notes           String?
-
-  createdAt       DateTime    @default(now()) @map("created_at")
-  updatedAt       DateTime    @updatedAt @map("updated_at")
-
-  items           OrderItem[]
+  id               String      @id @default(uuid())
+  orderNumber      String      @unique @map("order_number")
+  customerId       String      @map("customer_id")
+  status           OrderStatus @default(PENDING)
+  subtotal         Decimal     @db.Decimal(10, 2)
+  discount         Decimal     @default(0) @db.Decimal(10, 2)
+  tax              Decimal     @default(0) @db.Decimal(10, 2)
+  shipping         Decimal     @default(0) @db.Decimal(10, 2)
+  total            Decimal     @db.Decimal(10, 2)
+  couponCode       String?     @map("coupon_code")
+  shippingName     String?     @map("shipping_name")
+  shippingEmail    String?     @map("shipping_email")
+  shippingPhone    String?     @map("shipping_phone")
+  shippingAddress  String?     @map("shipping_address")
+  shippingCity     String?     @map("shipping_city")
+  shippingState    String?     @map("shipping_state")
+  shippingZip      String?     @map("shipping_zip")
+  shippingCountry  String?     @default("IN") @map("shipping_country")
+  paymentMethod    String?     @map("payment_method")
+  paymentId        String?     @map("payment_id")
+  paymentStatus    String?     @default("VERIFICATION_PENDING") @map("payment_status")
+  paymentReference String?     @map("payment_reference")
+  notes            String?
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+  items            OrderItem[]
+  customer         Customer    @relation(fields: [customerId], references: [id])
 
   @@index([customerId])
   @@index([status])
   @@map("orders")
 }
 
-enum OrderStatus {
-  PENDING
-  CONFIRMED
-  PROCESSING
-  SHIPPED
-  DELIVERED
-  CANCELLED
-  REFUNDED
-}
-
 model OrderItem {
   id         String   @id @default(uuid())
   orderId    String   @map("order_id")
-  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   paintingId String   @map("painting_id")
-  painting   Painting @relation(fields: [paintingId], references: [id])
   quantity   Int      @default(1)
   price      Decimal  @db.Decimal(10, 2)
   frame      String?  @default("Black Oak")
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  painting   Painting @relation(fields: [paintingId], references: [id])
 
   @@map("order_items")
 }
 
-// ═══════════════════════════════════════════════════
-// CART
-// ═══════════════════════════════════════════════════
 model CartItem {
   id         String   @id @default(uuid())
   customerId String   @map("customer_id")
-  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   paintingId String   @map("painting_id")
-  painting   Painting @relation(fields: [paintingId], references: [id])
   quantity   Int      @default(1)
   frame      String?  @default("Black Oak")
   createdAt  DateTime @default(now())
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  painting   Painting @relation(fields: [paintingId], references: [id])
 
   @@unique([customerId, paintingId, frame])
   @@map("cart_items")
 }
 
-// ═══════════════════════════════════════════════════
-// WISHLIST
-// ═══════════════════════════════════════════════════
 model WishlistItem {
   id         String   @id @default(uuid())
   customerId String   @map("customer_id")
-  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   paintingId String   @map("painting_id")
-  painting   Painting @relation(fields: [paintingId], references: [id])
   createdAt  DateTime @default(now())
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  painting   Painting @relation(fields: [paintingId], references: [id])
 
   @@unique([customerId, paintingId])
   @@map("wishlist_items")
 }
 
-// ═══════════════════════════════════════════════════
-// COUPON
-// ═══════════════════════════════════════════════════
 model Coupon {
-  id            String   @id @default(uuid())
-  code          String   @unique
+  id            String       @id @default(uuid())
+  code          String       @unique
   discountType  DiscountType @map("discount_type")
-  discountValue Decimal  @map("discount_value") @db.Decimal(10, 2)
-  minOrderValue Decimal? @map("min_order_value") @db.Decimal(10, 2)
-  maxUses       Int?     @map("max_uses")
-  usedCount     Int      @default(0) @map("used_count")
-  isActive      Boolean  @default(true) @map("is_active")
-  startsAt      DateTime @default(now()) @map("starts_at")
-  expiresAt     DateTime? @map("expires_at")
-  createdAt     DateTime @default(now()) @map("created_at")
+  discountValue Decimal      @map("discount_value") @db.Decimal(10, 2)
+  minOrderValue Decimal?     @map("min_order_value") @db.Decimal(10, 2)
+  maxUses       Int?         @map("max_uses")
+  usedCount     Int          @default(0) @map("used_count")
+  isActive      Boolean      @default(true) @map("is_active")
+  startsAt      DateTime     @default(now()) @map("starts_at")
+  expiresAt     DateTime?    @map("expires_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
 
   @@map("coupons")
 }
 
-enum DiscountType {
-  PERCENTAGE
-  FIXED
-}
-
-// ═══════════════════════════════════════════════════
-// REVIEW
-// ═══════════════════════════════════════════════════
 model Review {
   id         String   @id @default(uuid())
   customerId String   @map("customer_id")
-  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   paintingId String   @map("painting_id")
-  painting   Painting @relation(fields: [paintingId], references: [id])
   rating     Int      @default(5)
   comment    String?
   createdAt  DateTime @default(now()) @map("created_at")
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  painting   Painting @relation(fields: [paintingId], references: [id])
 
   @@unique([customerId, paintingId])
   @@map("reviews")
 }
 
-// ═══════════════════════════════════════════════════
-// BANNER / HOMEPAGE SECTIONS
-// ═══════════════════════════════════════════════════
 model Banner {
   id        String   @id @default(uuid())
   title     String?
@@ -276,11 +215,6 @@ model Banner {
   @@map("banners")
 }
 
-// ═══════════════════════════════════════════════════
-// SITE SETTINGS (admin-configurable key/value store)
-// e.g. payment.upiId, payment.payeeName, payment.qrImage,
-//      payment.instructions
-// ═══════════════════════════════════════════════════
 model Setting {
   id        String   @id @default(uuid())
   key       String   @unique
@@ -290,18 +224,43 @@ model Setting {
   @@map("settings")
 }
 
-// ═══════════════════════════════════════════════════
-// ANALYTICS / PAGEVIEWS
-// ═══════════════════════════════════════════════════
 model PageView {
-  id        String   @id @default(uuid())
-  path      String
-  paintingId String? @map("painting_id")
-  ip        String?
-  userAgent String?  @map("user_agent")
-  createdAt DateTime @default(now()) @map("created_at")
+  id         String   @id @default(uuid())
+  path       String
+  paintingId String?  @map("painting_id")
+  ip         String?
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
 
   @@index([paintingId])
   @@index([createdAt])
   @@map("page_views")
+}
+
+model custom_requests {
+  id            String   @id
+  customerName  String
+  phoneNumber   String
+  frameType     String
+  estimatedSize String
+  notes         String?  @db.VarChar(500)
+  imageUrls     String[]
+  status        String   @default("Pending")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
 }
