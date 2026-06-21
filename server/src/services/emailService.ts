@@ -98,7 +98,12 @@ export async function sendCustomPaintingEmail(
     content: file.buffer,
     contentType: file.mimetype,
   })) || [];
-
+  console.log("SMTP_USER:", env.smtpUser);
+  console.log("SMTP_PASS_LENGTH:", env.smtpPass?.length);
+  console.log("SMTP_HOST:", "smtp.gmail.com");
+  console.log("SMTP_PORT:", 587);
+  await transporter.verify();
+  console.log("SMTP VERIFIED");
   await transporter.sendMail({
     from: `"Yashika Gallery" <${env.smtpUser}>`,
     to: env.adminEmail || "chayansehgal3@gmail.com",
