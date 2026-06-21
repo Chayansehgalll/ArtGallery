@@ -20,8 +20,10 @@ export async function sendCustomPaintingEmail(
 
   const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
+    port: 587,
+    secure: false,
+    connectionTimeout: 10000, // 60 seconds
+    greetingTimeout: 7000,   // 30 seconds
     auth: {
       user: env.smtpUser,
       pass: env.smtpPass,
@@ -97,7 +99,7 @@ export async function sendCustomPaintingEmail(
   console.log("SMTP_USER:", env.smtpUser);
   console.log("SMTP_PASS_LENGTH:", env.smtpPass?.length);
   console.log("SMTP_HOST:", "smtp.gmail.com");
-  console.log("SMTP_PORT:", 465);
+  console.log("SMTP_PORT:", 587);
   console.log("SMTP VERIFIED");
   await transporter.sendMail({
     from: `"Yashika Gallery" <${env.smtpUser}>`,
