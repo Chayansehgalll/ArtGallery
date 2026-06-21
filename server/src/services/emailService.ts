@@ -102,5 +102,5 @@ export async function sendCustomPaintingEmail(
     attachments: attachments,
   });
 
-  console.log("✅ Email sent successfully with attachments!");
+  // console.log("✅ Email sent successfully with attachments!");
 }

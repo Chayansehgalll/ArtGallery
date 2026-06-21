@@ -161,7 +161,6 @@ export default function CustomPaintingPage() {
     e.preventDefault();
 
     if (!validateForm()) return;
-
     setIsSubmitting(true);
 
     const formData = new FormData();
@@ -184,7 +183,7 @@ export default function CustomPaintingPage() {
 
       const result = await response.json();
 
-      console.log("Response:", result); // Debug log
+      // console.log("Response:", result);
 
       if (response.ok && result.success) {
         // Clear form first

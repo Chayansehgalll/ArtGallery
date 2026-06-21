@@ -5,7 +5,7 @@ import { env } from "../config/env.js";
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Seeding database...\n");
+  // console.log("🌱 Seeding database...\n");
 
   // ─── Admin ───
   const adminPassword = await bcrypt.hash(env.adminPassword, 12);
@@ -18,7 +18,7 @@ async function main() {
       name: "Yashika",
     },
   });
-  console.log(`✅ Admin: ${admin.email}`);
+  // console.log(`✅ Admin: ${admin.email}`);
 
   // ─── Categories ───
   const categories = [
@@ -37,7 +37,7 @@ async function main() {
       create: cat,
     });
   }
-  console.log("✅ Categories created");
+  // console.log("✅ Categories created");
 
   // ─── Coupon ───
   await prisma.coupon.upsert({
@@ -52,7 +52,7 @@ async function main() {
       isActive: true,
     },
   });
-  console.log("✅ Coupon: WELCOME10 (10% off orders above ₹5,000)");
+  // console.log("✅ Coupon: WELCOME10 (10% off orders above ₹5,000)");
 
   // ─── Payment Settings ───
   const paymentDefaults: Record<string, string> = {
@@ -68,7 +68,7 @@ async function main() {
       create: { key, value },
     });
   }
-  console.log("✅ Payment settings (UPI) — editable from admin panel");
+  // console.log("✅ Payment settings (UPI) — editable from admin panel");
 
   console.log("\n🎨 Seed complete!");
 }

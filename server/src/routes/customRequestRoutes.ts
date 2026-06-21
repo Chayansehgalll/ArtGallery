@@ -12,16 +12,16 @@ router.post("/", uploadImages, async (req: Request, res: Response) => {
     const files = req.files as Express.Multer.File[] | undefined;
 
     // Log the request details
-    console.log("\n🎨 ═══════════════════════════════════════════════════════");
+    // console.log("\n🎨 ═══════════════════════════════════════════════════════");
     console.log("   NEW CUSTOM PAINTING REQUEST");
-    console.log("═══════════════════════════════════════════════════════\n");
-    console.log(`👤 Name: ${name}`);
-    console.log(`📞 Phone: ${phone}`);
-    console.log(`🖼️  Frame: ${frameType}`);
-    console.log(`📏 Size: ${estimatedSize}`);
-    if (notes) console.log(`📝 Notes: ${notes}`);
+    // console.log("═══════════════════════════════════════════════════════\n");
+    // console.log(`👤 Name: ${name}`);
+    // console.log(`📞 Phone: ${phone}`);
+    // console.log(`🖼️  Frame: ${frameType}`);
+    // console.log(`📏 Size: ${estimatedSize}`);
+    // if (notes) console.log(`📝 Notes: ${notes}`);
     console.log(`📷 Images: ${files?.length || 0} uploaded`);
-    console.log("\n💌 Sending email to: ankurbhardwaj869@gmail.com");
+    console.log("\n💌 Sending email to: chayan@gmail.com");
     console.log("═══════════════════════════════════════════════════════\n");
 
     // Send email
