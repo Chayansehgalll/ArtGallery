@@ -2,6 +2,7 @@ import { Router } from "express";
 import { uploadImages } from "../middleware/upload.js";
 import { sendCustomPaintingEmail } from "../services/emailService.js";
 import type { Request, Response } from "express";
+import { env } from "../config/env.js";
 
 const router = Router();
 
@@ -23,7 +24,12 @@ router.post("/", uploadImages, async (req: Request, res: Response) => {
     console.log(`📷 Images: ${files?.length || 0} uploaded`);
     console.log("\n💌 Sending email to: chayan@gmail.com");
     console.log("═══════════════════════════════════════════════════════\n");
-
+    console.log({
+      host: env.smtpHost,
+      port: env.smtpPort,
+      user: env.smtpUser,
+      passLength: env.smtpPass?.length,
+    });
     // Send email
     try {
       await sendCustomPaintingEmail({
