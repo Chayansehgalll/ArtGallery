@@ -1,6 +1,9 @@
-import nodemailer from "nodemailer";
 import { env } from "../config/env.js";
 
+/**
+ * Send custom painting request email via external email service API
+ * This avoids SMTP port blocking issues on platforms like Render
+ */
 export async function sendCustomPaintingEmail(
   data: {
     name: string;
@@ -12,24 +15,11 @@ export async function sendCustomPaintingEmail(
   },
   files?: Express.Multer.File[]
 ) {
-  // Check if SMTP is configured
-  if (!env.smtpHost || !env.smtpUser || !env.smtpPass) {
-    console.log("⚠️  SMTP not configured - skipping email");
+  // Check if email service URL is configured
+  if (!env.emailServiceUrl) {
+    console.log("⚠️  Email service URL not configured - skipping email");
     return;
   }
-
-  const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
-    connectionTimeout: 10000, // 60 seconds
-    greetingTimeout: 7000,   // 30 seconds
-    auth: {
-      user: env.smtpUser,
-      pass: env.smtpPass,
-    },
-  });
-  console.log("SMTP VERIFIED");
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -90,24 +80,46 @@ export async function sendCustomPaintingEmail(
     </html>
   `;
 
-  // Prepare attachments
-  const attachments = files?.map((file, index) => ({
-    filename: file.originalname || `reference-image-${index + 1}.${file.mimetype.split('/')[1]}`,
-    content: file.buffer,
-    contentType: file.mimetype,
-  })) || [];
-  console.log("SMTP_USER:", env.smtpUser);
-  console.log("SMTP_PASS_LENGTH:", env.smtpPass?.length);
-  console.log("SMTP_HOST:", "smtp.gmail.com");
-  console.log("SMTP_PORT:", 587);
-  console.log("SMTP VERIFIED");
-  await transporter.sendMail({
-    from: `"Yashika Gallery" <${env.smtpUser}>`,
-    to: env.adminEmail || "chayansehgal3@gmail.com",
-    subject: `🎨 New Custom Painting Request - ${data.name}`,
-    html: htmlContent,
-    attachments: attachments,
-  });
+  try {
+    // Use FormData to send email with attachments
+    const FormData = (await import('form-data')).default;
+    const formData = new FormData();
+    
+    formData.append('to', env.adminEmail || 'chayansehgal3@gmail.com');
+    formData.append('subject', `🎨 New Custom Painting Request - ${data.name}`);
+    formData.append('body', htmlContent);
+    formData.append('isHtml', 'true');
 
-  // console.log("✅ Email sent successfully with attachments!");
+    // Attach image files
+    if (files && files.length > 0) {
+      files.forEach((file) => {
+        formData.append('attachments', file.buffer, {
+          filename: file.originalname,
+          contentType: file.mimetype,
+        });
+      });
+    }
+
+    console.log(`📧 Sending email to ${env.adminEmail} via email service...`);
+    
+    // Call the email service API
+    const response = await fetch(`${env.emailServiceUrl}/api/send-email`, {
+      method: 'POST',
+      body: formData as any,
+      headers: formData.getHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json() as { error?: string };
+      throw new Error(`Email service error: ${errorData.error || response.statusText}`);
+    }
+
+    const result = await response.json() as { success: boolean; messageId: string; message: string };
+    console.log("✅ Email sent successfully via email service!", result.messageId);
+    
+    return result;
+  } catch (error) {
+    console.error("❌ Failed to send email via email service:", error);
+    throw error;
+  }
 }

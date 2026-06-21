@@ -41,4 +41,7 @@ export const env = {
   smtpPass: process.env.SMTP_PASS || "",
   emailFrom: process.env.EMAIL_FROM || "noreply@yashika.art",
   adminEmail: process.env.ADMIN_MAIL || "",
+  
+  // Email Service API (for bypassing SMTP port blocks)
+  emailServiceUrl: process.env.EMAIL_SERVICE_URL || "",
 };
