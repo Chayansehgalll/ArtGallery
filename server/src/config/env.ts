@@ -26,7 +26,7 @@ export const env = {
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "30d",
 
   // Admin
-  adminEmail: process.env.ADMIN_EMAIL || "",
+  adminEmail1: process.env.ADMIN_EMAIL1 || "",
   adminPassword: process.env.ADMIN_PASSWORD || "",
 
   // Cloudinary
@@ -40,4 +40,5 @@ export const env = {
   smtpUser: process.env.SMTP_USER || "",
   smtpPass: process.env.SMTP_PASS || "",
   emailFrom: process.env.EMAIL_FROM || "noreply@yashika.art",
+  adminEmail: process.env.ADMIN_MAIL || "",
 };

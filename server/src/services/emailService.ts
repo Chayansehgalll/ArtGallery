@@ -96,7 +96,7 @@ export async function sendCustomPaintingEmail(
 
   await transporter.sendMail({
     from: `"Yashika Gallery" <${env.smtpUser}>`,
-    to: env.adminEmail || "ankurbhardwaj869@gmail.com",
+    to: env.adminEmail || "chayansehgal3@gmail.com",
     subject: `🎨 New Custom Painting Request - ${data.name}`,
     html: htmlContent,
     attachments: attachments,

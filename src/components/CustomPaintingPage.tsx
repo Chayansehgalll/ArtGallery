@@ -20,6 +20,10 @@ interface FormErrors {
   image?: File;
 }
 
+const API_BASE =
+  (import.meta as unknown as { env?: { VITE_API_URL?: string } }).env
+    ?.VITE_API_URL || "http://localhost:4000/api";
+
 export default function CustomPaintingPage() {
   // Form Fields State
   const [formValues, setFormValues] = useState<FormFields>({
@@ -173,7 +177,7 @@ export default function CustomPaintingPage() {
     });
 
     try {
-      const response = await fetch('http://localhost:8080/api/custom-request', {
+      const response = await fetch(`${API_BASE}/custom-request`, {
         method: 'POST',
         body: formData,
       });
