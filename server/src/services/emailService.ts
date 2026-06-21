@@ -20,17 +20,13 @@ export async function sendCustomPaintingEmail(
 
   const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
-    requireTLS: true,
+    port: 465,
+    secure: true,
     auth: {
       user: env.smtpUser,
       pass: env.smtpPass,
     },
-    connectionTimeout: 10000,
   });
-
-  await transporter.verify();
   console.log("SMTP VERIFIED");
 
   const htmlContent = `

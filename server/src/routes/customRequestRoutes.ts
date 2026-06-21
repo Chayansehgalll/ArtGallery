@@ -31,19 +31,29 @@ router.post("/", uploadImages, async (req: Request, res: Response) => {
       passLength: env.smtpPass?.length,
     });
     // Send email
-    try {
-      await sendCustomPaintingEmail({
+    // Send email asynchronously in the background (Remove the 'await')
+    sendCustomPaintingEmail({
+      name,
+      phone,
+      frameType,
+      estimatedSize,
+      notes: notes || "",
+      imageCount: files?.length || 0,
+    }, files).catch((emailError) => {
+      // This catches errors in the background without affecting the user's response
+      console.error("Background Email error:", emailError);
+    });
+
+    // Send success response instantly back to the frontend
+    return res.json({
+      success: true,
+      message: "Custom painting request received successfully!",
+      data: {
         name,
         phone,
-        frameType,
-        estimatedSize,
-        notes: notes || "",
         imageCount: files?.length || 0,
-      }, files);
-    } catch (emailError) {
-      console.error("Email error:", emailError);
-      // Continue even if email fails
-    }
+      },
+    });
 
     // Send success response
     res.json({
